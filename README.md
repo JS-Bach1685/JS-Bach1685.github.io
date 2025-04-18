@@ -9,9 +9,15 @@
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; 
-             background-color: transparent;
-             border: none;
-             }
+             background-color: transparent !important;
+        }
+        .map-conatiner {
+            background-color: transparent !important;
+        }
+        img.map-pin {
+            background-color: transparent !important;
+            border: none;
+        }
     </style>
 </head>
 <body>
