@@ -14,9 +14,6 @@
   background-color: transparent !important;
   background-image: none !important;
 }
-.leaflet-marker-icon {
-  filter: drop-shadow(0px 0px 1px black) !important;
-}
     </style>
 </head>
 <body>
