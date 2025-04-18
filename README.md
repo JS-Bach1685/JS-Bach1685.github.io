@@ -81,6 +81,16 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
+        
+var myIcon = L.icon({
+  iconUrl: 'images/marker-icon.png',
+  shadowUrl: 'images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+L.marker([51.5, -0.09], {icon: myIcon}).addTo(map);
 
         // Markers
         let markerA, markerM, markerB;
