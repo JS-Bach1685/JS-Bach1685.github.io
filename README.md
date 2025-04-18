@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-         html, body,  {
+         html, body, div, section, header, footer, main, aside {
       background: none !important;
       background-color: transparent !important;
       border: none !important;
+      background-image: none !important;       
       box-shadow: none !important;
     }
         #map { height: 500px; margin-bottom: 1em; }
