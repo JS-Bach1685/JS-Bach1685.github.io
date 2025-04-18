@@ -11,7 +11,7 @@
         body { font-family: Arial, sans-serif; 
              background-color: transparent !important;
         }
-        .map-conatiner {
+        .map-container {
             background-color: transparent !important;
         }
         img.map-pin {
