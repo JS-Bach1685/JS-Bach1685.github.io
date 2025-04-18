@@ -6,14 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-         html, div, section, header, footer, main, aside {
-      background: none !important;
-      background-color: transparent !important;
-      border: none !important;
-      background-image: none !important;       
-      box-shadow: none !important;
-             /* Make sure images are visible */
-img {
+         img {
   opacity: 1 !important;
   background: none !important;
   background-color: transparent !important;
