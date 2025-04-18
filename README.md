@@ -12,6 +12,14 @@
       border: none !important;
       background-image: none !important;       
       box-shadow: none !important;
+             /* Make sure images are visible */
+img {
+  opacity: 1 !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
     }
         #map { height: 500px; margin-bottom: 1em; }
         .input-group { margin: 10px 0; }
