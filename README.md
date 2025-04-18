@@ -8,7 +8,9 @@
         #map { height: 500px; margin-bottom: 1em; }
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
-        body { font-family: Arial, sans-serif; }
+        body { font-family: Arial, sans-serif; 
+             background-color: transparent;
+             }
     </style>
 </head>
 <body>
