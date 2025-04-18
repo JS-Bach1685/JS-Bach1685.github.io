@@ -42,6 +42,13 @@
       iconUrl: 'https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon.png',
       shadowUrl: 'https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-shadow.png'
     });
+    .leaflet-marker-icon {
+  background-image: url('https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon-2x.png') !important;
+}
+.leaflet-marker-shadow {
+  background-image: url('https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-shadow.png') !important;
+}
+
 
     // Initialize the map
     var map = L.map('map').setView([51.5, -0.09], 13);
