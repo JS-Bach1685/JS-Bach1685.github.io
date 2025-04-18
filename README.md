@@ -11,14 +11,16 @@
         body { font-family: Arial, sans-serif; 
                    {
       background-color: transparent !important;
+        border: none;   
     }
     .map-container {
       background-color: transparent !important;
+        border: none;
     }
     img.map-pin {
       background-color: transparent !important;
-      border: none;
-    } }
+        border: none;
+          } }
     </style>
 </head>
 <body>
