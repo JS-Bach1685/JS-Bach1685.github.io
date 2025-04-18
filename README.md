@@ -38,9 +38,9 @@
   <script>
     // Point Leaflet to the correct marker image paths
     L.Icon.Default.mergeOptions({
-      iconRetinaUrl: '[images/marker-icon-2x.png](https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon-2x.png)',
-      iconUrl: '[images/marker-icon.png](https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon.png)',
-      shadowUrl: '[images/marker-shadow.png](https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-shadow.png)'
+      iconRetinaUrl: 'https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon-2x.png',
+      iconUrl: 'https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-icon.png',
+      shadowUrl: 'https://github.com/JS-Bach1685/JS-Bach1685.github.io/blob/main/images/marker-shadow.png'
     });
 
     // Initialize the map
