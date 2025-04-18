@@ -8,9 +8,7 @@
          * {
         background-color: transparent !important;
         background-image: none !important;
-      }
-      .leaflet-marker-icon {
-        background-color: transparent !important;        
+      }    
       }
         #map { height: 500px; margin-bottom: 1em; }
         .input-group { margin: 10px 0; }
