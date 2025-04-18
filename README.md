@@ -1,146 +1,135 @@
-
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Inverse Midpoint Calculator (Draggable Markers)</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: none;
-      background-color: transparent;
-    }
-    #map {
-      width: 100%;
-      height: 400px;
-      margin-top: 20px;
-      margin-bottom: 20px;
-    }
-    label {
-      display: inline-block;
-      width: 80px;
-      margin-bottom: 5px;
-    }
-    input[type="text"] {
-      width: 120px;
-      margin-bottom: 10px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 6px 16px;
-      font-size: 1em;
-    }
-    h1, h2 {
-      margin-bottom: 10px;
-    }
-  </style>
+    <title>Inverse Midpoint Calculator (Draggable)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; margin-bottom: 1em; }
+        .input-group { margin: 10px 0; }
+        label { display: inline-block; width: 120px; }
+        body { font-family: Arial, sans-serif; }
+    </style>
 </head>
 <body>
-  <h1>Inverse Midpoint Calculator (Draggable Markers)</h1>
-  <div>
-    <h2>Point A (Start)</h2>
-    <label for="latA">Latitude:</label>
-    <input id="latA" type="text"><br>
-    <label for="lonA">Longitude:</label>
-    <input id="lonA" type="text"><br>
-  </div>
-  <div>
-    <h2>Midpoint (M)</h2>
-    <label for="latM">Latitude:</label>
-    <input id="latM" type="text"><br>
-    <label for="lonM">Longitude:</label>
-    <input id="lonM" type="text"><br>
-  </div>
-  <button id="calcBtn">Calculate Inverse Midpoint</button>
-  <div id="map"></div>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // Define the custom icon using your PNGs
-    const customIcon = L.icon({
-      iconUrl: 'images/marker-icon.png',
-      shadowUrl: 'images/marker-shadow.png',
-      iconSize:     [25, 41],
-      iconAnchor:   [12, 41],
-      popupAnchor:  [1, -34],
-      shadowSize:   [41, 41]
-    });
+    <h2>Inverse Midpoint Calculator (Draggable Markers)</h2>
+    <div class="input-group">
+        <h3>Point A (Start)</h3>
+        <label>Latitude:</label>
+        <input type="number" id="a_lat" value="30.4079" step="0.0001"><br>
+        <label>Longitude:</label>
+        <input type="number" id="a_lon" value="-81.5823" step="0.0001">
+    </div>
+    <div class="input-group">
+        <h3>Midpoint (M)</h3>
+        <label>Latitude:</label>
+        <input type="number" id="m_lat" value="33.6562" step="0.0001"><br>
+        <label>Longitude:</label>
+        <input type="number" id="m_lon" value="-80.8234" step="0.0001">
+    </div>
+    <button onclick="updateMarkers()">Calculate Inverse Midpoint</button>
+    <div id="map"></div>
+    <div id="result"></div>
 
-    // Initialize map and set default view
-    var map = L.map('map').setView([51.5, -0.09], 13);
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Inverse midpoint function (spherical)
+        function inverseMidpoint(a_lat, a_lon, m_lat, m_lon) {
+            const toRad = deg => deg * Math.PI / 180;
+            const toDeg = rad => rad * 180 / Math.PI;
 
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+            const φ1 = toRad(a_lat);
+            const λ1 = toRad(a_lon);
+            const φ2 = toRad(m_lat);
+            const λ2 = toRad(m_lon);
 
-    // Initialize markers with custom icon and make them draggable
-    var markerA = L.marker([51.5, -0.09], {icon: customIcon, draggable: true}).addTo(map);
-    var markerM = L.marker([51.505, -0.08], {icon: customIcon, draggable: true}).addTo(map);
+            const Δφ = φ2 - φ1;
+            const Δλ = λ2 - λ1;
 
-    // Set input fields to initial marker positions
-    document.getElementById('latA').value = markerA.getLatLng().lat.toFixed(6);
-    document.getElementById('lonA').value = markerA.getLatLng().lng.toFixed(6);
-    document.getElementById('latM').value = markerM.getLatLng().lat.toFixed(6);
-    document.getElementById('lonM').value = markerM.getLatLng().lng.toFixed(6);
+            // Haversine distance (angular)
+            const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+            const d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    // Update input fields when markers are dragged
-    markerA.on('dragend', function(e) {
-      var pos = markerA.getLatLng();
-      document.getElementById('latA').value = pos.lat.toFixed(6);
-      document.getElementById('lonA').value = pos.lng.toFixed(6);
-    });
-    markerM.on('dragend', function(e) {
-      var pos = markerM.getLatLng();
-      document.getElementById('latM').value = pos.lat.toFixed(6);
-      document.getElementById('lonM').value = pos.lng.toFixed(6);
-    });
+            // Initial bearing
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+            const θ = Math.atan2(y, x);
 
-    // Update markers when input fields are changed
-    function updateMarkersFromInputs() {
-      var latA = parseFloat(document.getElementById('latA').value);
-      var lonA = parseFloat(document.getElementById('lonA').value);
-      var latM = parseFloat(document.getElementById('latM').value);
-      var lonM = parseFloat(document.getElementById('lonM').value);
-      if (!isNaN(latA) && !isNaN(lonA)) {
-        markerA.setLatLng([latA, lonA]);
-      }
-      if (!isNaN(latM) && !isNaN(lonM)) {
-        markerM.setLatLng([latM, lonM]);
-      }
-    }
-    document.getElementById('latA').addEventListener('change', updateMarkersFromInputs);
-    document.getElementById('lonA').addEventListener('change', updateMarkersFromInputs);
-    document.getElementById('latM').addEventListener('change', updateMarkersFromInputs);
-    document.getElementById('lonM').addEventListener('change', updateMarkersFromInputs);
+            // Destination point (twice the angular distance)
+            const δ = 2 * d;
+            const φ3 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(θ));
+            const λ3 = λ1 + Math.atan2(Math.sin(θ)*Math.sin(δ)*Math.cos(φ1), Math.cos(δ) - Math.sin(φ1)*Math.sin(φ3));
 
-    // Calculate the inverse midpoint
-    function calculateInverseMidpoint() {
-      var latA = parseFloat(document.getElementById('latA').value);
-      var lonA = parseFloat(document.getElementById('lonA').value);
-      var latM = parseFloat(document.getElementById('latM').value);
-      var lonM = parseFloat(document.getElementById('lonM').value);
+            let lon = toDeg(λ3);
+            lon = (lon + 540) % 360 - 180; // Normalize
 
-      // Simple inverse midpoint calculation (for demonstration)
-      var latB = 2 * latM - latA;
-      var lonB = 2 * lonM - lonA;
+            return [toDeg(φ3), lon];
+        }
 
-      // Add or move a marker for the calculated point
-      if (window.markerB) {
-        markerB.setLatLng([latB, lonB]);
-      } else {
-        window.markerB = L.marker([latB, lonB], {icon: customIcon, draggable: true}).addTo(map)
-          .bindPopup("Inverse Point B").openPopup();
-        markerB.on('dragend', function(e) {
-          var pos = markerB.getLatLng();
-          // Optionally update inputs or recalculate as needed
-        });
-      }
-      map.panTo([latM, lonM]);
-    }
+        // Initialize map
+        const map = L.map('map').setView([32.5, -81.2], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-    document.getElementById('calcBtn').addEventListener('click', calculateInverseMidpoint);
-  </script>
+        // Markers
+        let markerA, markerM, markerB;
+
+        function addOrMoveMarker(marker, lat, lon, options, onDragEnd) {
+            if (marker) {
+                marker.setLatLng([lat, lon]);
+            } else {
+                marker = L.marker([lat, lon], options);
+                if (onDragEnd) marker.on('dragend', onDragEnd);
+                marker.addTo(map);
+            }
+            return marker;
+        }
+
+        function updateMarkers() {
+            // Get input values
+            const a_lat = parseFloat(document.getElementById('a_lat').value);
+            const a_lon = parseFloat(document.getElementById('a_lon').value);
+            const m_lat = parseFloat(document.getElementById('m_lat').value);
+            const m_lon = parseFloat(document.getElementById('m_lon').value);
+
+            // Calculate inverse midpoint
+            const [b_lat, b_lon] = inverseMidpoint(a_lat, a_lon, m_lat, m_lon);
+
+            // Add or move markers
+            markerA = addOrMoveMarker(markerA, a_lat, a_lon, {draggable: true, title: "Point A"}, function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('a_lat').value = pos.lat.toFixed(6);
+                document.getElementById('a_lon').value = pos.lng.toFixed(6);
+                updateMarkers();
+            });
+            markerA.bindPopup("Point A").openPopup();
+
+            markerM = addOrMoveMarker(markerM, m_lat, m_lon, {draggable: true, title: "Midpoint"}, function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('m_lat').value = pos.lat.toFixed(6);
+                document.getElementById('m_lon').value = pos.lng.toFixed(6);
+                updateMarkers();
+            });
+            markerM.bindPopup("Midpoint");
+
+            markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Inverse Midpoint"});
+            markerB.bindPopup("Inverse Midpoint");
+
+            // Fit map to show all points
+            const group = new L.featureGroup([markerA, markerM, markerB]);
+            map.fitBounds(group.getBounds().pad(0.3));
+
+            // Show result
+            document.getElementById('result').innerHTML = `
+                <h3>Results:</h3>
+                <strong>Inverse Midpoint:</strong> ${b_lat.toFixed(6)}°N, ${b_lon.toFixed(6)}°W<br>
+                <a href="https://www.google.com/maps/place/${b_lat},${b_lon}" target="_blank">View on Google Maps</a>
+            `;
+        }
+
+        // Initialize markers on page load
+        window.onload = updateMarkers;
+    </script>
 </body>
 </html>
