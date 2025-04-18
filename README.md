@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
     <title>Inverse Midpoint Calculator (Draggable)</title>
