@@ -66,6 +66,12 @@
 
             return [toDeg(φ3), lon];
         }
+         // Fix default icon paths
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'images/marker-icon-2x.png',
+      iconUrl: 'images/marker-icon.png',
+      shadowUrl: 'images/marker-shadow.png'
+    });
 
         // Initialize map
         const map = L.map('map').setView([32.5, -81.2], 6);
