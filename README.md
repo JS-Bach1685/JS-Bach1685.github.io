@@ -10,6 +10,7 @@
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; 
              background-color: transparent;
+             border: none;
              }
     </style>
 </head>
