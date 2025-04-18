@@ -42,19 +42,6 @@
     <div id="result"></div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-     <script>
-    // Explicitly set marker paths (redundant but safe)
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: '/images/marker-icon-2x.png',
-      iconUrl: '/images/marker-icon.png',
-      shadowUrl: '/images/marker-shadow.png'
-    });
-
-    // Initialize map and markers
-    var map = L.map('map').setView([51.5, -0.09], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    L.marker([51.5, -0.09]).addTo(map);
-   </script>
     <script>
         // Inverse midpoint function (spherical)
         function inverseMidpoint(a_lat, a_lon, m_lat, m_lon) {
