@@ -10,17 +10,20 @@
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; 
                    {
-      background-color: transparent !important;
-        border: none;   
-    }
-    .map-container {
-      background-color: transparent !important;
-        border: none;
-    }
-    img.map-pin {
-      background-color: transparent !important;
-        border: none;
-          } }
+   `css
+html {
+  background-color: transparent !important;
+}
+
+* {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.leaflet-marker-icon {
+  background-color: transparent !important;
+  filter: drop-shadow(0px 0px 1px black) !important;
+}
     </style>
 </head>
 <body>
@@ -145,17 +148,3 @@
     </script>
 </body>
 </html>
-`css
-html {
-  background-color: transparent !important;
-}
-
-* {
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-.leaflet-marker-icon {
-  background-color: transparent !important;
-  filter: drop-shadow(0px 0px 1px black) !important;
-}
