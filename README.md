@@ -1,6 +1,7 @@
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Inverse Midpoint Calculator (Draggable)</title>
+    <title>Inverse Midpoint Calculator</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -12,20 +13,17 @@
     </style>
 </head>
 <body>
-    <h2>Inverse Midpoint Calculator (Draggable Markers)</h2>
+    <h2>Inverse Midpoint Calculator</h2>
+	<h4>You can drag & drop Point A or the Midpoint</h4>
     <div class="input-group">
         <h3>Point A (Start)</h3>
-        <label>Latitude:</label>
-        <input type="number" id="a_lat" value="30.4079" step="0.0001"><br>
-        <label>Longitude:</label>
-        <input type="number" id="a_lon" value="-81.5823" step="0.0001">
+        <label>Coordinates:</label>
+        <input type="text" id="a_coords" value="30.4079, -81.5823" placeholder="lat, lon">
     </div>
     <div class="input-group">
         <h3>Midpoint (M)</h3>
-        <label>Latitude:</label>
-        <input type="number" id="m_lat" value="33.6562" step="0.0001"><br>
-        <label>Longitude:</label>
-        <input type="number" id="m_lon" value="-80.8234" step="0.0001">
+        <label>Coordinates:</label>
+        <input type="text" id="m_coords" value="33.6562, -80.8234" placeholder="lat, lon">
     </div>
     <button onclick="updateMarkers()">Calculate Inverse Midpoint</button>
     <div id="map"></div>
@@ -88,10 +86,8 @@
 
         function updateMarkers() {
             // Get input values
-            const a_lat = parseFloat(document.getElementById('a_lat').value);
-            const a_lon = parseFloat(document.getElementById('a_lon').value);
-            const m_lat = parseFloat(document.getElementById('m_lat').value);
-            const m_lon = parseFloat(document.getElementById('m_lon').value);
+            const [a_lat, a_lon] = document.getElementById('a_coords').value.split(',').map(v => parseFloat(v.trim()));
+            const [m_lat, m_lon] = document.getElementById('m_coords').value.split(',').map(v => parseFloat(v.trim()));
 
             // Calculate inverse midpoint
             const [b_lat, b_lon] = inverseMidpoint(a_lat, a_lon, m_lat, m_lon);
@@ -99,16 +95,14 @@
             // Add or move markers
             markerA = addOrMoveMarker(markerA, a_lat, a_lon, {draggable: true, title: "Point A"}, function(e) {
                 const pos = e.target.getLatLng();
-                document.getElementById('a_lat').value = pos.lat.toFixed(6);
-                document.getElementById('a_lon').value = pos.lng.toFixed(6);
+                document.getElementById('a_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
                 updateMarkers();
             });
             markerA.bindPopup("Point A").openPopup();
 
             markerM = addOrMoveMarker(markerM, m_lat, m_lon, {draggable: true, title: "Midpoint"}, function(e) {
                 const pos = e.target.getLatLng();
-                document.getElementById('m_lat').value = pos.lat.toFixed(6);
-                document.getElementById('m_lon').value = pos.lng.toFixed(6);
+                document.getElementById('m_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
                 updateMarkers();
             });
             markerM.bindPopup("Midpoint");
@@ -123,7 +117,7 @@
             // Show result
             document.getElementById('result').innerHTML = `
                 <h3>Results:</h3>
-                <strong>Inverse Midpoint:</strong> ${b_lat.toFixed(6)}°N, ${b_lon.toFixed(6)}°W<br>
+                <strong>Inverse Midpoint:</strong> ${b_lat.toFixed(6)}, ${b_lon.toFixed(6)}<br>
                 <a href="https://www.google.com/maps/place/${b_lat},${b_lon}" target="_blank">View on Google Maps</a>
             `;
         }
