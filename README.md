@@ -19,7 +19,7 @@
 <body>
     <h2>Map Point Reflector</h2>
 	<h3>Enter a point and midpoint to find the reflected location on the map.</h3>
-	<h4>You can drag & drop Point A or the Midpoint</h4>
+	<h4>You can also drag & drop Point A or the Midpoint</h4>
     <div class="input-group">
         <h3>Point A</h3>
         <label>Coordinates:</label>
