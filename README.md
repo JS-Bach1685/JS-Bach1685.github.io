@@ -9,6 +9,11 @@
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; }
+	.leaflet-marker-icon,
+	.leaflet-marker-shadow {
+   	 background-color: transparent !important;
+    	background: transparent !important;
+}
     </style>
 </head>
 <body>
