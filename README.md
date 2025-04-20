@@ -120,8 +120,8 @@
             });
             markerM.bindPopup("Midpoint");
 
-            markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Inverse Midpoint"});
-            markerB.bindPopup("Inverse Midpoint");
+            markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Reflected Point"});
+            markerB.bindPopup("Reflected Point");
 
             // Fit map to show all points
             const group = new L.featureGroup([markerA, markerM, markerB]);
