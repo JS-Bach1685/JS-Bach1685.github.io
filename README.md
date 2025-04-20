@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>Inverse Midpoint Calculator</title>
+    <title>Map Point Reflector</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -17,19 +17,20 @@
     </style>
 </head>
 <body>
-    <h2>Inverse Midpoint Calculator</h2>
+    <h2>Map Point Reflector</h2>
+	<h3>Enter a point and midpoint to find the reflected location on the map.</h3>
 	<h4>You can drag & drop Point A or the Midpoint</h4>
     <div class="input-group">
-        <h3>Point A (Start)</h3>
+        <h3>Point A</h3>
         <label>Coordinates:</label>
         <input type="text" id="a_coords" value="30.4079, -81.5823" placeholder="lat, lon">
     </div>
     <div class="input-group">
-        <h3>Midpoint (M)</h3>
+        <h3>Midpoint</h3>
         <label>Coordinates:</label>
         <input type="text" id="m_coords" value="33.6562, -80.8234" placeholder="lat, lon">
     </div>
-    <button onclick="updateMarkers()">Calculate Inverse Midpoint</button>
+    <button onclick="updateMarkers()">Calculate Reflected Point</button>
     <div id="map"></div>
     <div id="result"></div>
 
@@ -129,7 +130,7 @@
             // Show result
             document.getElementById('result').innerHTML = `
                 <h3>Results:</h3>
-                <strong>Inverse Midpoint:</strong> ${b_lat.toFixed(6)}, ${b_lon.toFixed(6)}<br>
+                <strong>Reflected Point Coordinates:</strong> ${b_lat.toFixed(6)}, ${b_lon.toFixed(6)}<br>
                 <a href="https://www.google.com/maps/place/${b_lat},${b_lon}" target="_blank">View on Google Maps</a>
             `;
         }
