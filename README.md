@@ -8,31 +8,94 @@
         #map { height: 500px; margin-bottom: 1em; }
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
-        body { font-family: Arial, sans-serif; }
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
         .leaflet-marker-icon,
         .leaflet-marker-shadow {
             background-color: transparent !important;
             background: transparent !important;
         }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
-    <h2>Map Point Reflector</h2>
-    <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
-    <h4>You can also drag & drop Point A or the Midpoint</h4>
-    <div class="input-group">
-        <h3>Point A</h3>
-        <label>Coordinates:</label>
-        <input type="text" id="a_coords" value="37.95792, -121.29413" placeholder="lat, lon">
+    <h2>Map Point Reflector & Midpoint Calculator</h2>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('reflect-tab')">Find Reflected Point</div>
+        <div class="tab" onclick="switchTab('midpoint-tab')">Calculate Midpoint</div>
     </div>
-    <div class="input-group">
-        <h3>Midpoint</h3>
-        <label>Coordinates:</label>
-        <input type="text" id="m_coords" value="39.60798, -116.37683" placeholder="lat, lon">
+    
+    <div id="reflect-tab" class="tab-content active">
+        <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
+        <h4>You can also drag & drop Point A or the Midpoint</h4>
+        <h4>Please refresh page if the map looks wonky</h4>
+        <div class="input-group">
+            <h3>Point A</h3>
+            <label>Coordinates:</label>
+            <input type="text" id="a_coords" value="37.957920, -121.294130" placeholder="lat, lon">
+        </div>
+        <div class="input-group">
+            <h3>Midpoint</h3>
+            <label>Coordinates:</label>
+            <input type="text" id="m_coords" value="39.607980, -116.376830" placeholder="lat, lon">
+        </div>
+        <button onclick="updateMarkers()">Calculate Reflected Point</button>
+        <div id="map"></div>
+        <div id="result" class="result-box"></div>
     </div>
-    <button onclick="updateMarkers()">Calculate Reflected Point</button>
-    <div id="map"></div>
-    <div id="result"></div>
+    
+    <div id="midpoint-tab" class="tab-content">
+        <h3>Calculate the Midpoint Between Two Coordinates</h3>
+        <div class="input-group">
+            <h3>Point 1</h3>
+            <label>Coordinates:</label>
+            <input type="text" id="point1_coords" value="" placeholder="lat, lon">
+        </div>
+        <div class="input-group">
+            <h3>Point 2</h3>
+            <label>Coordinates:</label>
+            <input type="text" id="point2_coords" value="" placeholder="lat, lon">
+        </div>
+        <div class="input-group">
+            <h3>Custom Midpoint (Optional)</h3>
+            <label>Coordinates:</label>
+            <input type="text" id="custom_midpoint" value="" placeholder="lat, lon (optional)">
+            <p><small>If provided, distance between calculated midpoint and this point will be shown</small></p>
+        </div>
+        <button onclick="calculateMidpoint()">Calculate Midpoint</button>
+        <div id="midpoint_result" class="result-box"></div>
+    </div>
 
     <!-- Load Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -42,25 +105,59 @@
         let markerA = null;
         let markerM = null;
         let markerB = null;
+        let map = null;
         
         // Initialize map
-        const map = L.map('map', {
-            worldCopyJump: true // Helps with the wrapping behavior
-        }).setView([32.5, -81.2], 6);
-        
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            noWrap: false // Allow the map to repeat horizontally
-        }).addTo(map);
+        function initMap() {
+            if (map !== null) return; // Only initialize once
+            
+            map = L.map('map', {
+                worldCopyJump: true // Helps with the wrapping behavior
+            }).setView([32.5, -81.2], 6);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                noWrap: false // Allow the map to repeat horizontally
+            }).addTo(map);
 
-        // Fix Leaflet's default icon paths
-        delete L.Icon.Default.prototype._getIconUrl;
-        L.Icon.Default.mergeOptions({
-            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-        });
+            // Fix Leaflet's default icon paths
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+            });
+        }
+
+        // Tab switching function
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Add active class to the clicked tab
+            Array.from(document.querySelectorAll('.tab')).find(tab => 
+                tab.textContent.toLowerCase().includes(tabId.split('-')[0])
+            ).classList.add('active');
+            
+            // Initialize map if switching to reflect tab
+            if (tabId === 'reflect-tab') {
+                setTimeout(() => {
+                    initMap();
+                    updateMarkers();
+                }, 100);
+            }
+        }
 
         // Function to normalize coordinates
         function normalizeCoordinates(lat, lng) {
@@ -71,6 +168,119 @@
             lng = ((lng + 540) % 360) - 180;
             
             return [lat, lng];
+        }
+
+        // Calculate midpoint using the geomidpoint.com method (center of gravity)
+        function calculateGeographicMidpoint(coords) {
+            const toRad = deg => deg * Math.PI / 180;
+            const toDeg = rad => rad * 180 / Math.PI;
+            
+            // Convert to Cartesian coordinates
+            let x = 0, y = 0, z = 0;
+            
+            for (const [lat, lon] of coords) {
+                const phi = toRad(lat);
+                const lambda = toRad(lon);
+                
+                // Convert to Cartesian coordinates
+                x += Math.cos(phi) * Math.cos(lambda);
+                y += Math.cos(phi) * Math.sin(lambda);
+                z += Math.sin(phi);
+            }
+            
+            // Get averages
+            x /= coords.length;
+            y /= coords.length;
+            z /= coords.length;
+            
+            // Convert back to spherical coordinates
+            const lambda = Math.atan2(y, x);
+            const hyp = Math.sqrt(x * x + y * y);
+            const phi = Math.atan2(z, hyp);
+            
+            // Convert to degrees
+            const midLat = toDeg(phi);
+            const midLon = toDeg(lambda);
+            
+            return normalizeCoordinates(midLat, midLon);
+        }
+
+        // Function to calculate distance between two points (in miles)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3958.8; // Earth's radius in miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c;
+            
+            return distance;
+        }
+
+        // Function to handle midpoint calculation
+        function calculateMidpoint() {
+            try {
+                // Get input values
+                let [lat1, lon1] = document.getElementById('point1_coords').value.split(',').map(v => parseFloat(v.trim()));
+                let [lat2, lon2] = document.getElementById('point2_coords').value.split(',').map(v => parseFloat(v.trim()));
+                
+                // Validate inputs
+                if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+                    throw new Error("Invalid coordinates. Please enter valid numbers.");
+                }
+                
+                // Normalize coordinates
+                [lat1, lon1] = normalizeCoordinates(lat1, lon1);
+                [lat2, lon2] = normalizeCoordinates(lat2, lon2);
+                
+                // Update input fields with normalized values
+                document.getElementById('point1_coords').value = `${lat1.toFixed(6)}, ${lon1.toFixed(6)}`;
+                document.getElementById('point2_coords').value = `${lat2.toFixed(6)}, ${lon2.toFixed(6)}`;
+                
+                // Calculate midpoint
+                const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
+                
+                let resultHTML = `
+                    <h3>Midpoint Results:</h3>
+                    <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
+                    <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
+                    <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
+                    <strong>Distance from Point 1 to Midpoint:</strong> ${calculateDistance(lat1, lon1, midLat, midLon).toFixed(2)} miles<br>
+                    <strong>Distance from Point 2 to Midpoint:</strong> ${calculateDistance(lat2, lon2, midLat, midLon).toFixed(2)} miles<br>
+                `;
+                
+                // Check if custom midpoint was provided
+                const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
+                if (customMidpointValue) {
+                    try {
+                        let [customLat, customLon] = customMidpointValue.split(',').map(v => parseFloat(v.trim()));
+                        
+                        if (isNaN(customLat) || isNaN(customLon)) {
+                            throw new Error("Invalid custom midpoint coordinates");
+                        }
+                        
+                        [customLat, customLon] = normalizeCoordinates(customLat, customLon);
+                        document.getElementById('custom_midpoint').value = `${customLat.toFixed(6)}, ${customLon.toFixed(6)}`;
+                        
+                        const customDistance = calculateDistance(midLat, midLon, customLat, customLon);
+                        resultHTML += `<br><strong>Distance between calculated midpoint and custom midpoint:</strong> ${customDistance.toFixed(2)} miles`;
+                    } catch (err) {
+                        resultHTML += `<br><span style="color: red;">Error with custom midpoint: ${err.message}</span>`;
+                    }
+                }
+                
+                document.getElementById('midpoint_result').innerHTML = resultHTML;
+                
+            } catch (error) {
+                document.getElementById('midpoint_result').innerHTML = `
+                    <h3>Error:</h3>
+                    <strong>${error.message}</strong>
+                `;
+            }
         }
 
         // Improved inverse midpoint function using vector-based calculation
@@ -143,6 +353,9 @@
         // Update markers
         function updateMarkers() {
             try {
+                // Initialize map if not already initialized
+                initMap();
+                
                 // Get input values and normalize them
                 let [a_lat, a_lon] = document.getElementById('a_coords').value.split(',').map(v => parseFloat(v.trim()));
                 let [m_lat, m_lon] = document.getElementById('m_coords').value.split(',').map(v => parseFloat(v.trim()));
@@ -217,8 +430,10 @@
             }
         }
 
-        // Initialize markers on page load
-        window.onload = updateMarkers;
+        // Initialize tabs and default functionality on page load
+        window.onload = function() {
+            switchTab('reflect-tab');
+        };
     </script>
 </body>
 </html>
