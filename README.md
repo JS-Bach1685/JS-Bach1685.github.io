@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
         #map { height: 500px; margin-bottom: 1em; }
+        #midpoint_map { height: 500px; margin: 20px 0; }
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -45,6 +46,15 @@
             background-color: #f9f9f9;
             border: 1px solid #ddd;
             border-radius: 5px;
+        }
+        .distance-label {
+            white-space: nowrap;
+            font-size: 12px;
+            background-color: white;
+            padding: 3px 6px;
+            border: 1px solid #888;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -90,10 +100,11 @@
         <div class="input-group">
             <h3>Custom Midpoint (Optional)</h3>
             <label>Coordinates:</label>
-            <input type="text" id="custom_midpoint" value="" placeholder="lat, lon (optional)">
+            <input type="text" id="custom_midpoint" value="" placeholder="lat, lon (optional)" onchange="updateMidpointMap()">
             <p><small>If provided, distance between calculated midpoint and this point will be shown</small></p>
         </div>
-        <button onclick="calculateMidpoint()">Calculate Midpoint</button>
+        <button onclick="calculateMidpointWithMap()">Calculate Midpoint</button>
+        <div id="midpoint_map"></div>
         <div id="midpoint_result" class="result-box"></div>
     </div>
 
@@ -106,6 +117,25 @@
         let markerM = null;
         let markerB = null;
         let map = null;
+        
+        // Global variables for midpoint map
+        let midpointMap = null;
+        let point1Marker = null;
+        let point2Marker = null;
+        let calculatedMidpointMarker = null;
+        let customMidpointMarker = null;
+        let distancePolyline = null;
+        let distanceLabel = null;
+        
+        // Fix Leaflet's default icon paths once for all maps
+        function fixLeafletIconPaths() {
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+            });
+        }
         
         // Initialize map
         function initMap() {
@@ -121,13 +151,26 @@
                 noWrap: false // Allow the map to repeat horizontally
             }).addTo(map);
 
-            // Fix Leaflet's default icon paths
-            delete L.Icon.Default.prototype._getIconUrl;
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-            });
+            // Fix icon paths
+            fixLeafletIconPaths();
+        }
+        
+        // Initialize midpoint map
+        function initMidpointMap() {
+            if (midpointMap !== null) return; // Only initialize once
+            
+            midpointMap = L.map('midpoint_map', {
+                worldCopyJump: true // Helps with the wrapping behavior
+            }).setView([32.5, -81.2], 3);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                noWrap: false // Allow the map to repeat horizontally
+            }).addTo(midpointMap);
+
+            // Fix icon paths
+            fixLeafletIconPaths();
         }
 
         // Tab switching function
@@ -150,13 +193,37 @@
                 tab.textContent.toLowerCase().includes(tabId.split('-')[0])
             ).classList.add('active');
             
-            // Initialize map if switching to reflect tab
+            // Initialize appropriate map
             if (tabId === 'reflect-tab') {
                 setTimeout(() => {
                     initMap();
                     updateMarkers();
                 }, 100);
+            } else if (tabId === 'midpoint-tab') {
+                setTimeout(() => {
+                    initMidpointMap();
+                    // Update the map if we already have data
+                    if (document.getElementById('point1_coords').value && 
+                        document.getElementById('point2_coords').value) {
+                        calculateMidpointWithMap();
+                    }
+                }, 100);
             }
+        }
+
+        // Function to parse coordinates from input string
+        function parseCoordinates(coordString) {
+            if (!coordString || coordString.trim() === '') {
+                throw new Error("Coordinates cannot be empty");
+            }
+            
+            const parts = coordString.split(',').map(v => parseFloat(v.trim()));
+            
+            if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
+                throw new Error("Invalid coordinates format. Please use 'latitude, longitude'");
+            }
+            
+            return parts;
         }
 
         // Function to normalize coordinates
@@ -220,18 +287,168 @@
             
             return distance;
         }
+        
+        // Function to add or update a marker on the midpoint map
+        function addOrUpdateMidpointMarker(marker, lat, lon, title) {
+            if (marker) {
+                marker.setLatLng([lat, lon]);
+            } else {
+                marker = L.marker([lat, lon]);
+                marker.addTo(midpointMap);
+            }
+            marker.bindPopup(title);
+            return marker;
+        }
+        
+        // Improved function to create a distance label that's always on one line
+        function createDistanceLabel(midLat, midLon, distance) {
+            // Remove existing distance label if it exists
+            if (distanceLabel) {
+                midpointMap.removeLayer(distanceLabel);
+            }
+            
+            // Format the distance with appropriate precision
+            const formattedDistance = distance.toFixed(2);
+            
+            // Create a div icon with nowrap styling
+            const labelIcon = L.divIcon({
+                className: 'custom-label', // This is ignored, we'll use the html styling
+                html: `<div class="distance-label">${formattedDistance} miles</div>`,
+                iconSize: [null, null], // Auto-size based on content
+                iconAnchor: [50, 10] // Centered horizontally
+            });
+            
+            // Create the marker with the label
+            distanceLabel = L.marker([midLat, midLon], {
+                icon: labelIcon,
+                interactive: false, // Make it non-interactive (can't be clicked)
+                keyboard: false
+            }).addTo(midpointMap);
+            
+            return distanceLabel;
+        }
+        
+        // Function to update the midpoint map display
+        function updateMidpointMap() {
+            try {
+                // Make sure the midpoint map is initialized
+                initMidpointMap();
+                                
+                // Check if we have the necessary data
+                const point1Value = document.getElementById('point1_coords').value.trim();
+                const point2Value = document.getElementById('point2_coords').value.trim();
+                
+                if (!point1Value || !point2Value) {
+                    return; // Not enough data to update map
+                }
+                
+                // Parse point coordinates
+                let [lat1, lon1] = parseCoordinates(point1Value);
+                let [lat2, lon2] = parseCoordinates(point2Value);
+                
+                // Normalize coordinates
+                [lat1, lon1] = normalizeCoordinates(lat1, lon1);
+                [lat2, lon2] = normalizeCoordinates(lat2, lon2);
+                
+                // Calculate midpoint
+                const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
+                
+                // Update or add markers
+                point1Marker = addOrUpdateMidpointMarker(point1Marker, lat1, lon1, "Point 1");
+                point2Marker = addOrUpdateMidpointMarker(point2Marker, lat2, lon2, "Point 2");
+                calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint");
+                
+                // Check for custom midpoint
+                const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
+                
+                // Remove existing polyline
+                if (distancePolyline) {
+                    midpointMap.removeLayer(distancePolyline);
+                    distancePolyline = null;
+                }
+                
+                // Remove existing distance label
+                if (distanceLabel) {
+                    midpointMap.removeLayer(distanceLabel);
+                    distanceLabel = null;
+                }
+                
+                if (customMidpointValue) {
+                    try {
+                        let [customLat, customLon] = parseCoordinates(customMidpointValue);
+                        [customLat, customLon] = normalizeCoordinates(customLat, customLon);
+                        
+                        // Add or update custom midpoint marker
+                        customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat, customLon, "Custom Midpoint");
+                        
+                        // Calculate distance
+                        const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
+                        
+                        // Add polyline
+                        distancePolyline = L.polyline(
+                            [[midLat, midLon], [customLat, customLon]], 
+                            { color: 'red', weight: 3 }
+                        ).addTo(midpointMap);
+                        
+                        // Add improved distance label
+                        const midPoint = [
+                            (midLat + customLat) / 2,
+                            (midLon + customLon) / 2
+                        ];
+                        
+                        createDistanceLabel(midPoint[0], midPoint[1], distanceMiles);
+                        
+                    } catch (err) {
+                        console.error("Error with custom midpoint:", err);
+                        if (customMidpointMarker) {
+                            midpointMap.removeLayer(customMidpointMarker);
+                            customMidpointMarker = null;
+                        }
+                    }
+                } else {
+                    // If no custom midpoint is provided, remove the custom midpoint marker
+                    if (customMidpointMarker) {
+                        midpointMap.removeLayer(customMidpointMarker);
+                        customMidpointMarker = null;
+                    }
+                }
+                
+                // Create a group with all valid markers to fit the map view
+                const markersToInclude = [point1Marker, point2Marker, calculatedMidpointMarker];
+                if (customMidpointMarker) markersToInclude.push(customMidpointMarker);
+                
+                const group = new L.featureGroup(markersToInclude);
+                midpointMap.fitBounds(group.getBounds().pad(0.3));
+                
+            } catch (error) {
+                console.error("Error updating midpoint map:", error);
+                document.getElementById('midpoint_result').innerHTML = `
+                    <h3>Error:</h3>
+                    <strong>${error.message}</strong>
+                `;
+            }
+        }
+
+        // Function to handle midpoint calculation with map update
+        function calculateMidpointWithMap() {
+            try {
+                // This calls the original calculation function
+                calculateMidpoint();
+                
+                // Then updates the map
+                updateMidpointMap();
+                
+            } catch (error) {
+                console.error("Error calculating midpoint with map:", error);
+            }
+        }
 
         // Function to handle midpoint calculation
         function calculateMidpoint() {
             try {
                 // Get input values
-                let [lat1, lon1] = document.getElementById('point1_coords').value.split(',').map(v => parseFloat(v.trim()));
-                let [lat2, lon2] = document.getElementById('point2_coords').value.split(',').map(v => parseFloat(v.trim()));
-                
-                // Validate inputs
-                if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
-                    throw new Error("Invalid coordinates. Please enter valid numbers.");
-                }
+                let [lat1, lon1] = parseCoordinates(document.getElementById('point1_coords').value);
+                let [lat2, lon2] = parseCoordinates(document.getElementById('point2_coords').value);
                 
                 // Normalize coordinates
                 [lat1, lon1] = normalizeCoordinates(lat1, lon1);
@@ -249,17 +466,13 @@
                     <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
                     <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
                     <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
-                                   `;
+                `;
                 
                 // Check if custom midpoint was provided
                 const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
                 if (customMidpointValue) {
                     try {
-                        let [customLat, customLon] = customMidpointValue.split(',').map(v => parseFloat(v.trim()));
-                        
-                        if (isNaN(customLat) || isNaN(customLon)) {
-                            throw new Error("Invalid custom midpoint coordinates");
-                        }
+                        let [customLat, customLon] = parseCoordinates(customMidpointValue);
                         
                         [customLat, customLon] = normalizeCoordinates(customLat, customLon);
                         document.getElementById('custom_midpoint').value = `${customLat.toFixed(6)}, ${customLon.toFixed(6)}`;
@@ -348,19 +561,22 @@
             return marker;
         }
 
-        // Update markers
+        // Update markers for the reflection calculator
         function updateMarkers() {
             try {
                 // Initialize map if not already initialized
                 initMap();
                 
-                // Get input values and normalize them
-                let [a_lat, a_lon] = document.getElementById('a_coords').value.split(',').map(v => parseFloat(v.trim()));
-                let [m_lat, m_lon] = document.getElementById('m_coords').value.split(',').map(v => parseFloat(v.trim()));
-                
-                // Validate inputs
-                if (isNaN(a_lat) || isNaN(a_lon) || isNaN(m_lat) || isNaN(m_lon)) {
-                    throw new Error("Invalid coordinates. Please enter valid numbers.");
+                // Get input values
+                try {
+                    var [a_lat, a_lon] = parseCoordinates(document.getElementById('a_coords').value);
+                    var [m_lat, m_lon] = parseCoordinates(document.getElementById('m_coords').value);
+                } catch (error) {
+                    document.getElementById('result').innerHTML = `
+                        <h3>Error:</h3>
+                        <strong>${error.message}</strong>
+                    `;
+                    return;
                 }
                 
                 // Normalize the input coordinates
@@ -430,6 +646,10 @@
 
         // Initialize tabs and default functionality on page load
         window.onload = function() {
+            // Fix Leaflet icon paths
+            fixLeafletIconPaths();
+            
+            // Initialize the default tab
             switchTab('reflect-tab');
         };
     </script>
