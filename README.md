@@ -249,9 +249,7 @@
                     <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
                     <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
                     <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
-                    <strong>Distance from Point 1 to Midpoint:</strong> ${calculateDistance(lat1, lon1, midLat, midLon).toFixed(2)} miles<br>
-                    <strong>Distance from Point 2 to Midpoint:</strong> ${calculateDistance(lat2, lon2, midLat, midLon).toFixed(2)} miles<br>
-                `;
+                                   `;
                 
                 // Check if custom midpoint was provided
                 const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
