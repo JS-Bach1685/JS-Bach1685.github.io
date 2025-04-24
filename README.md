@@ -73,12 +73,12 @@
         <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
-            <input type="text" id="a_coords" value="37.957920, -121.294130" placeholder="lat, lon">
+            <input type="text" id="a_coords" value="29.95744, -90.06295" placeholder="lat, lon">
         </div>
         <div class="input-group">
             <h3>Midpoint</h3>
             <label>Coordinates:</label>
-            <input type="text" id="m_coords" value="39.607980, -116.376830" placeholder="lat, lon">
+            <input type="text" id="m_coords" value="33.83793, -84.05174" placeholder="lat, lon">
         </div>
         <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="map"></div>
