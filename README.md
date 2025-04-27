@@ -56,6 +56,15 @@
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+        .warning-box {
+            margin: 15px 0;
+            padding: 12px 15px;
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -70,15 +79,16 @@
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <h4>You can also drag & drop Point A or the Midpoint</h4>
         <h4>Please refresh page if the map looks wonky</h4>
+        <div id="distance-warning"></div>
         <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
-            <input type="text" id="a_coords" value="29.95744, -90.06295" placeholder="lat, lon">
+            <input type="text" id="a_coords" value="37.957920, -121.294130" placeholder="lat, lon">
         </div>
         <div class="input-group">
             <h3>Midpoint</h3>
             <label>Coordinates:</label>
-            <input type="text" id="m_coords" value="33.83793, -84.05174" placeholder="lat, lon">
+            <input type="text" id="m_coords" value="39.607980, -116.376830" placeholder="lat, lon">
         </div>
         <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="map"></div>
@@ -126,6 +136,10 @@
         let customMidpointMarker = null;
         let distancePolyline = null;
         let distanceLabel = null;
+        
+        // Constants for Earth dimensions
+        const EARTH_RADIUS_MILES = 3958.8; // Earth's radius in miles
+        const HALF_EARTH_CIRCUMFERENCE = Math.PI * EARTH_RADIUS_MILES; // Half of Earth's circumference in miles
         
         // Fix Leaflet's default icon paths once for all maps
         function fixLeafletIconPaths() {
@@ -274,7 +288,7 @@
 
         // Function to calculate distance between two points (in miles)
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 3958.8; // Earth's radius in miles
+            const R = EARTH_RADIUS_MILES; // Earth's radius in miles
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             
@@ -286,6 +300,15 @@
             const distance = R * c;
             
             return distance;
+        }
+        
+        // Function to check if distance exceeds half of Earth's circumference
+        function isDistanceTooLarge(lat1, lon1, lat2, lon2) {
+            const distance = calculateDistance(lat1, lon1, lat2, lon2);
+            return {
+                isTooLarge: distance > HALF_EARTH_CIRCUMFERENCE / 2, // Half of half circumference (quarter of full)
+                distance: distance
+            };
         }
         
         // Function to add or update a marker on the midpoint map
@@ -567,6 +590,9 @@
                 // Initialize map if not already initialized
                 initMap();
                 
+                // Clear any existing warning
+                document.getElementById('distance-warning').innerHTML = '';
+                
                 // Get input values
                 try {
                     var [a_lat, a_lon] = parseCoordinates(document.getElementById('a_coords').value);
@@ -586,6 +612,20 @@
                 // Update the input fields with normalized values
                 document.getElementById('a_coords').value = `${a_lat.toFixed(6)}, ${a_lon.toFixed(6)}`;
                 document.getElementById('m_coords').value = `${m_lat.toFixed(6)}, ${m_lon.toFixed(6)}`;
+                
+                // Check if distance is too large (more than a quarter of Earth's circumference)
+                const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
+                
+                if (isTooLarge) {
+                    // Show warning
+                    document.getElementById('distance-warning').innerHTML = `
+                        <div class="warning-box">
+                            <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
+                            is very large. For points this far apart, the reflected point calculation may not be what you expect.
+                            The true shortest path midpoint would be along a different great circle path.
+                        </div>
+                    `;
+                }
                 
                 // Calculate inverse midpoint
                 const [b_lat, b_lon] = improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon);
