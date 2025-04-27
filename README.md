@@ -79,7 +79,7 @@
     <div id="reflect-tab" class="tab-content active">
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <h4>You can also drag & drop Point A or the Midpoint</h4>
-        <h4>Please refresh page if the map looks wonky</h4>
+        <h4>Please refresh the page if the map looks wonky</h4>
         <div id="distance-warning"></div>
         <div class="input-group">
             <h3>Point A</h3>
