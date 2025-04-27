@@ -17,8 +17,17 @@
         }
         .tabs {
             display: flex;
+	    overflow-x: auto;
+	    white-space: nowrap;
             margin-bottom: 20px;
         }
+	
+	.tab-label {
+	     flex: 0 0 auto;
+	     padding: 12px 20px;
+	     font-size: 16px;
+	}
+
         .tab {
             padding: 10px 20px;
             background-color: #f0f0f0;
@@ -65,6 +74,12 @@
             border-radius: 5px;
             font-weight: bold;
         }
+	@media (max-width: 600px) {
+ 	 .tab-label {
+   	 font-size: 14px;
+    	padding: 10px 12px;
+  	}
+}
     </style>
 </head>
 <body>
@@ -74,9 +89,9 @@
     <div class="tabs">
         <div class="tab active" onclick="switchTab('reflect-tab')">Find Reflected Point</div>
         <div class="tab" onclick="switchTab('midpoint-tab')">Calculate Midpoint</div>
-	<div class="tab" onclick="switchTab('batch-tab')">Batch Processing</div>
+	<div class="tab" onclick="switchTab('batch-tab')">Photo Pair Finder</div>
     </div>
-    
+     
     <div id="reflect-tab" class="tab-content active">
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <p>You can also drag & drop Point A or the Midpoint</p>
