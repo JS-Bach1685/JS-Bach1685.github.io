@@ -1101,5 +1101,11 @@ function switchTab(tabId) {
             switchTab('reflect-tab');
         };
     </script>
+        <footer style="text-align: center; padding: 20px; font-size: 12px;">
+  <p>Found a bug or have a feature idea? Message me on Discord:
+  <a href="https://discord.com/users/g3mbert" target="_blank" style="text-decoration: none; color: inherit;"> 
+  @g3mbert </a>
+     </p>
+</footer>
 </body>
 </html>
