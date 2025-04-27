@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>Map Point Reflector</title>
+    <title>Team TPG Tools</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -74,22 +74,23 @@
     <div class="tabs">
         <div class="tab active" onclick="switchTab('reflect-tab')">Find Reflected Point</div>
         <div class="tab" onclick="switchTab('midpoint-tab')">Calculate Midpoint</div>
+	<div class="tab" onclick="switchTab('batch-tab')">Batch Processing</div>
     </div>
     
     <div id="reflect-tab" class="tab-content active">
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
-        <h4>You can also drag & drop Point A or the Midpoint</h4>
-        <h4>Please refresh the page if the map looks wonky</h4>
+        <p>You can also drag & drop Point A or the Midpoint</p>
+        <p>Refresh the page if the map looks wonky</p>
         <div id="distance-warning"></div>
         <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
-            <input type="text" id="a_coords" value="37.957920, -121.294130" placeholder="lat, lon">
+            <input type="text" id="a_coords" value="41.02201, -83.92215" placeholder="lat, lon">
         </div>
         <div class="input-group">
             <h3>Midpoint</h3>
             <label>Coordinates:</label>
-            <input type="text" id="m_coords" value="39.607980, -116.376830" placeholder="lat, lon">
+            <input type="text" id="m_coords" value="42.48927, -95.54477" placeholder="lat, lon">
         </div>
         <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="map"></div>
@@ -118,6 +119,42 @@
         <div id="midpoint_map"></div>
         <div id="midpoint_result" class="result-box"></div>
     </div>
+
+<div id="batch-tab" class="tab-content">
+    <h3>Batch Process Coordinate Pairs to Find Closest Midpoint</h3>
+    <p>Upload two CSV files with photo coordinates and find which pair produces a midpoint closest to the target.</p>
+    <p><strong>Warning:</strong>This might ruin the fun of the game, use at your own risk! Talk to your partner instead, make a new friend!</p>
+        
+    <div class="input-group">
+        <h3>File 1 (CSV with coordinates)</h3>
+        <input type="file" id="file1" accept=".csv">
+        <p><small>Format: Each line should contain "latitude,longitude" or "description,latitude,longitude"</small></p>
+    </div>
+    
+    <div class="input-group">
+        <h3>File 2 (CSV with coordinates)</h3>
+        <input type="file" id="file2" accept=".csv">
+        <p><small>Format: Same as File 1</small></p>
+    </div>
+    
+    <div class="input-group">
+        <h3>Target Midpoint</h3>
+        <label>Coordinates:</label>
+        <input type="text" id="target_midpoint" placeholder="lat, lon">
+    </div>
+    
+    <button onclick="processBatchFiles()">Find Best Matches</button>
+    
+    <div id="batch_progress" style="margin-top: 15px; display: none;">
+        <div style="width: 100%; background-color: #f0f0f0; height: 20px; border-radius: 4px; overflow: hidden;">
+            <div id="progress_bar" style="width: 0%; background-color: #4CAF50; height: 100%;"></div>
+        </div>
+        <p id="progress_text">Processing...</p>
+    </div>
+    
+    <div id="batch_map" style="height: 500px; margin: 20px 0; display: none;"></div>
+    <div id="batch_result" class="result-box"></div>
+</div>
 
     <!-- Load Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -684,6 +721,362 @@
                 `;
             }
         }
+// Global variables for batch processing
+let batchMap = null;
+let batchResults = [];
+let batchMarkers = [];
+
+// Initialize batch processing map
+function initBatchMap() {
+    if (batchMap !== null) return; // Only initialize once
+    
+    batchMap = L.map('batch_map', {
+        worldCopyJump: true
+    }).setView([32.5, -81.2], 3);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        noWrap: false
+    }).addTo(batchMap);
+
+    // Fix icon paths
+    fixLeafletIconPaths();
+}
+
+// Function to parse CSV file content
+function parseCSVCoordinates(csvContent) {
+    const lines = csvContent.split(/\r?\n/);
+    const coordinates = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        // Try to extract coordinates - handle both formats:
+        // "lat,lon" or "name,lat,lon"
+        const parts = line.split(',').map(p => p.trim());
+        
+        try {
+            let lat, lon, name;
+            
+            if (parts.length === 2) {
+                // Just coordinates: "lat,lon"
+                [lat, lon] = [parseFloat(parts[0]), parseFloat(parts[1])];
+                name = `Point ${i+1}`;
+            } else if (parts.length >= 3) {
+                // Format with name: "name,lat,lon"
+                name = parts[0];
+                lat = parseFloat(parts[1]);
+                lon = parseFloat(parts[2]);
+            } else {
+                continue; // Skip invalid lines
+            }
+            
+            if (isNaN(lat) || isNaN(lon)) continue;
+            
+            // Normalize coordinates
+            [lat, lon] = normalizeCoordinates(lat, lon);
+            
+            coordinates.push({
+                name: name,
+                lat: lat,
+                lon: lon
+            });
+        } catch (e) {
+            console.warn(`Error parsing line ${i+1}: ${line}`);
+        }
+    }
+    
+    return coordinates;
+}
+
+// Function to process batch files
+function processBatchFiles() {
+    // Clear previous results
+    batchResults = [];
+    batchMarkers.forEach(marker => {
+        if (batchMap) batchMap.removeLayer(marker);
+    });
+    batchMarkers = [];
+    
+    document.getElementById('batch_result').innerHTML = '';
+    
+    // Get files and target coordinates
+    const file1 = document.getElementById('file1').files[0];
+    const file2 = document.getElementById('file2').files[0];
+    const targetMidpointStr = document.getElementById('target_midpoint').value.trim();
+    
+    // Validate inputs
+    if (!file1 || !file2) {
+        document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> Please upload both CSV files.';
+        return;
+    }
+    
+    if (!targetMidpointStr) {
+        document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> Please enter target midpoint coordinates.';
+        return;
+    }
+    
+    try {
+        var [targetLat, targetLon] = parseCoordinates(targetMidpointStr);
+        [targetLat, targetLon] = normalizeCoordinates(targetLat, targetLon);
+    } catch (error) {
+        document.getElementById('batch_result').innerHTML = `<strong>Error:</strong> ${error.message}`;
+        return;
+    }
+    
+    // Show progress bar
+    document.getElementById('batch_progress').style.display = 'block';
+    document.getElementById('progress_bar').style.width = '0%';
+    document.getElementById('progress_text').innerText = 'Reading files...';
+    
+    // Process files
+    Promise.all([
+        readFileAsText(file1),
+        readFileAsText(file2)
+    ]).then(([content1, content2]) => {
+        // Parse coordinates from both files
+        const coords1 = parseCSVCoordinates(content1);
+        const coords2 = parseCSVCoordinates(content2);
+        
+        if (coords1.length === 0 || coords2.length === 0) {
+            throw new Error('Could not parse coordinates from one or both files. Check format.');
+        }
+        
+        document.getElementById('progress_text').innerText = `Processing ${coords1.length} × ${coords2.length} = ${coords1.length * coords2.length} possible pairs...`;
+        
+        // Process in batches to avoid freezing the UI
+        processPairsInBatches(coords1, coords2, targetLat, targetLon, 0, 0, 100);
+    }).catch(error => {
+        document.getElementById('batch_progress').style.display = 'none';
+        document.getElementById('batch_result').innerHTML = `<strong>Error:</strong> ${error.message}`;
+    });
+}
+
+// Helper function to read file as text
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = event => resolve(event.target.result);
+        reader.onerror = error => reject(error);
+        reader.readAsText(file);
+    });
+}
+
+// Process pairs in batches to avoid UI freeze
+function processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j, batchSize) {
+    const totalPairs = coords1.length * coords2.length;
+    const startTime = performance.now();
+    let pairsProcessed = 0;
+    
+    while (i < coords1.length && pairsProcessed < batchSize) {
+        while (j < coords2.length && pairsProcessed < batchSize) {
+            const coord1 = coords1[i];
+            const coord2 = coords2[j];
+            
+            // Calculate midpoint
+            const [midLat, midLon] = calculateGeographicMidpoint([
+                [coord1.lat, coord1.lon],
+                [coord2.lat, coord2.lon]
+            ]);
+            
+            // Calculate distance to target
+            const distanceToTarget = calculateDistance(midLat, midLon, targetLat, targetLon);
+            
+            batchResults.push({
+                point1: coord1,
+                point2: coord2,
+                midpoint: { lat: midLat, lon: midLon },
+                distance: distanceToTarget
+            });
+            
+            pairsProcessed++;
+            j++;
+        }
+        
+        if (j >= coords2.length) {
+            j = 0;
+            i++;
+        }
+    }
+    
+    // Update progress
+    const processedSoFar = Math.min(i * coords2.length + j, totalPairs);
+    const percentComplete = Math.round((processedSoFar / totalPairs) * 100);
+    document.getElementById('progress_bar').style.width = percentComplete + '%';
+    document.getElementById('progress_text').innerText = `Processed ${processedSoFar} of ${totalPairs} pairs (${percentComplete}%)`;
+    
+    if (i < coords1.length) {
+        // Continue processing in the next batch
+        setTimeout(() => {
+            processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j, batchSize);
+        }, 0);
+    } else {
+        // All done, show results
+        displayBatchResults(targetLat, targetLon);
+    }
+}
+
+// Display batch processing results
+function displayBatchResults(targetLat, targetLon) {
+    document.getElementById('batch_progress').style.display = 'none';
+    
+    if (batchResults.length === 0) {
+        document.getElementById('batch_result').innerHTML = '<strong>No valid coordinate pairs found.</strong>';
+        return;
+    }
+    
+    // Sort results by distance
+    batchResults.sort((a, b) => a.distance - b.distance);
+    
+    // Take top 5 results
+    const topResults = batchResults.slice(0, 5);
+    
+    // Initialize map
+    document.getElementById('batch_map').style.display = 'block';
+    initBatchMap();
+    
+    // Create result HTML
+    let resultHTML = `
+        <h3>Top 5 Closest Matches:</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <tr>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Rank</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 1</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 2</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Midpoint</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Distance to Target</th>
+            </tr>
+    `;
+    
+    // Add markers for target point
+    const targetIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+    
+    const targetMarker = L.marker([targetLat, targetLon], { icon: targetIcon })
+        .bindPopup("Target Midpoint")
+        .addTo(batchMap);
+    
+    batchMarkers.push(targetMarker);
+    
+    // Add markers for top results
+    topResults.forEach((result, index) => {
+        const { point1, point2, midpoint, distance } = result;
+        
+        resultHTML += `
+            <tr>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${index + 1}</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point1.name} (${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point2.name} (${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(2)} miles</td>
+            </tr>
+        `;
+        
+        // Only add markers for top 3 results to avoid clutter
+        if (index < 3) {
+            // Use different colors for top 3
+            const colors = ['gold', 'grey', 'orange'];
+            const color = colors[index];
+            
+            // Point 1 marker
+            const marker1 = L.marker([point1.lat, point1.lon])
+                .bindPopup(`${point1.name} (Pair #${index + 1})`)
+                .addTo(batchMap);
+            
+            // Point 2 marker
+            const marker2 = L.marker([point2.lat, point2.lon])
+                .bindPopup(`${point2.name} (Pair #${index + 1})`)
+                .addTo(batchMap);
+            
+            // Midpoint marker
+            const midpointIcon = new L.Icon({
+                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+            
+            const midMarker = L.marker([midpoint.lat, midpoint.lon], { icon: midpointIcon })
+                .bindPopup(`Midpoint #${index + 1} - ${distance.toFixed(2)} miles from target`)
+                .addTo(batchMap);
+            
+            // Add lines connecting the points
+            const polyline = L.polyline([
+                [point1.lat, point1.lon],
+                [midpoint.lat, midpoint.lon],
+                [point2.lat, point2.lon]
+            ], { color: color, weight: 2 }).addTo(batchMap);
+            
+            // Add distance line to target
+            const targetLine = L.polyline([
+                [midpoint.lat, midpoint.lon],
+                [targetLat, targetLon]
+            ], { color: 'red', weight: 2, dashArray: '5, 5' }).addTo(batchMap);
+            
+            batchMarkers.push(marker1, marker2, midMarker, polyline, targetLine);
+        }
+    });
+    
+    resultHTML += '</table>';
+    document.getElementById('batch_result').innerHTML = resultHTML;
+    
+    // Fit map to markers
+    const group = new L.featureGroup(batchMarkers);
+    batchMap.fitBounds(group.getBounds().pad(0.3));
+}
+
+// Update tab switching function to include batch tab
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show the selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to the clicked tab
+    Array.from(document.querySelectorAll('.tab')).find(tab => 
+        tab.textContent.toLowerCase().includes(tabId.split('-')[0])
+    ).classList.add('active');
+    
+    // Initialize appropriate map
+    if (tabId === 'reflect-tab') {
+        setTimeout(() => {
+            initMap();
+            updateMarkers();
+        }, 100);
+    } else if (tabId === 'midpoint-tab') {
+        setTimeout(() => {
+            initMidpointMap();
+            // Update the map if we already have data
+            if (document.getElementById('point1_coords').value && 
+                document.getElementById('point2_coords').value) {
+                calculateMidpointWithMap();
+            }
+        }, 100);
+    } else if (tabId === 'batch-tab') {
+        setTimeout(() => {
+            // We'll initialize batch map only when needed
+            document.getElementById('batch_map').style.display = 'none';
+        }, 100);
+    }
+}
 
         // Initialize tabs and default functionality on page load
         window.onload = function() {
