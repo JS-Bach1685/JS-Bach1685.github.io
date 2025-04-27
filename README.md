@@ -68,7 +68,8 @@
     </style>
 </head>
 <body>
-    <h2>Map Point Reflector & Midpoint Calculator</h2>
+    <h2>Team TPG Tools</h2>
+    <h4>Map Point Reflector & Midpoint Calculator</h4>
     
     <div class="tabs">
         <div class="tab active" onclick="switchTab('reflect-tab')">Find Reflected Point</div>
