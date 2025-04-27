@@ -83,9 +83,8 @@
     </style>
 </head>
 <body>
-    <h2>Team TPG Tools</h2>
-    <h4>Map Point Reflector & Midpoint Calculator</h4>
-    
+    <h3>A variety of map tools to help with team TPG</h3>
+        
     <div class="tabs">
         <div class="tab active" onclick="switchTab('reflect-tab')">Find Reflected Point</div>
         <div class="tab" onclick="switchTab('midpoint-tab')">Calculate Midpoint</div>
