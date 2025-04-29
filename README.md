@@ -20,6 +20,7 @@
 	  padding: 4px 6px !important;
 	  border-radius: 6px !important;
 	  max-width: 300px !important;
+   	  background-color: rgba(255, 255, 255, 0.9) !important;
 	}
 
 	.leaflet-popup-content {
@@ -28,6 +29,7 @@
 	  line-height: 1.2 !important;
 	  padding: 1 !important;
 	  padding-right: 7px !important;
+   	  max-width: 100% !important;
 	}
 
 	.leaflet-popup-tip {
