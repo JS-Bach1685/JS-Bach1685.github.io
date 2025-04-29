@@ -15,6 +15,28 @@
             background-color: transparent !important;
             background: transparent !important;
         }
+
+	.leaflet-popup-content-wrapper {
+	  padding: 4px 6px; /* slight padding around the box */
+	  border-radius: 6px;
+	  max-width: 300px; /* medium size: not too wide, not too tight */
+	}
+
+	.leaflet-popup-content {
+	  margin: 1;
+	  font-size: 12px;
+	  line-height: 1.2;
+	  padding: 1; 
+	  padding-right: 7px; 
+	}
+
+	.leaflet-popup-tip {
+	  width: 5px;
+	  height: 6px;
+	  margin: -5px auto 0;
+	  transform: rotate(45deg);
+	}
+
         .tabs {
             display: flex;
 	    overflow-x: auto;
@@ -173,568 +195,622 @@
     <!-- Load Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     
-    <script>
-        // Global variables for markers
-        let markerA = null;
-        let markerM = null;
-        let markerB = null;
-        let map = null;
+   <!-- This is just the modified part of the script section -->
+<script>
+    // Global variables for markers
+    let markerA = null;
+    let markerM = null;
+    let markerB = null;
+    let map = null;
+    
+    // Global variables for midpoint map
+    let midpointMap = null;
+    let point1Marker = null;
+    let point2Marker = null;
+    let calculatedMidpointMarker = null;
+    let customMidpointMarker = null;
+    let distancePolyline = null;
+    let distanceLabel = null;
+    
+    // Constants for Earth dimensions
+    const EARTH_RADIUS_MILES = 3958.8; // Earth's radius in miles
+    const HALF_EARTH_CIRCUMFERENCE = Math.PI * EARTH_RADIUS_MILES; // Half of Earth's circumference in miles
+    
+    // Create a red icon for midpoint markers
+    function createRedIcon() {
+        return new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+    }
+
+     // Function to create a gold icon for custom midpoint
+function createGoldIcon() {
+    return new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+}
+
+    
+    // Fix Leaflet's default icon paths once for all maps
+    function fixLeafletIconPaths() {
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
+        });
+    }
+    
+    // Initialize map
+    function initMap() {
+        if (map !== null) return; // Only initialize once
         
-        // Global variables for midpoint map
-        let midpointMap = null;
-        let point1Marker = null;
-        let point2Marker = null;
-        let calculatedMidpointMarker = null;
-        let customMidpointMarker = null;
-        let distancePolyline = null;
-        let distanceLabel = null;
+        map = L.map('map', {
+            worldCopyJump: true // Helps with the wrapping behavior
+        }).setView([32.5, -81.2], 6);
         
-        // Constants for Earth dimensions
-        const EARTH_RADIUS_MILES = 3958.8; // Earth's radius in miles
-        const HALF_EARTH_CIRCUMFERENCE = Math.PI * EARTH_RADIUS_MILES; // Half of Earth's circumference in miles
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            noWrap: false // Allow the map to repeat horizontally
+        }).addTo(map);
+
+        // Fix icon paths
+        fixLeafletIconPaths();
+    }
+    
+    // Initialize midpoint map
+    function initMidpointMap() {
+        if (midpointMap !== null) return; // Only initialize once
         
-        // Fix Leaflet's default icon paths once for all maps
-        function fixLeafletIconPaths() {
-            delete L.Icon.Default.prototype._getIconUrl;
-            L.Icon.Default.mergeOptions({
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-            });
+        midpointMap = L.map('midpoint_map', {
+            worldCopyJump: true // Helps with the wrapping behavior
+        }).setView([32.5, -81.2], 3);
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            noWrap: false // Allow the map to repeat horizontally
+        }).addTo(midpointMap);
+
+        // Fix icon paths
+        fixLeafletIconPaths();
+    }
+
+    // Tab switching function
+    function switchTab(tabId) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Show the selected tab content
+        document.getElementById(tabId).classList.add('active');
+        
+        // Add active class to the clicked tab
+        Array.from(document.querySelectorAll('.tab')).find(tab => 
+            tab.textContent.toLowerCase().includes(tabId.split('-')[0])
+        ).classList.add('active');
+        
+        // Initialize appropriate map
+        if (tabId === 'reflect-tab') {
+            setTimeout(() => {
+                initMap();
+                updateMarkers();
+            }, 100);
+        } else if (tabId === 'midpoint-tab') {
+            setTimeout(() => {
+                initMidpointMap();
+                // Update the map if we already have data
+                if (document.getElementById('point1_coords').value && 
+                    document.getElementById('point2_coords').value) {
+                    calculateMidpointWithMap();
+                }
+            }, 100);
+        } else if (tabId === 'batch-tab') {
+            setTimeout(() => {
+                // We'll initialize batch map only when needed
+                document.getElementById('batch_map').style.display = 'none';
+            }, 100);
+        }
+    }
+
+    // Function to parse coordinates from input string
+    function parseCoordinates(coordString) {
+        if (!coordString || coordString.trim() === '') {
+            throw new Error("Coordinates cannot be empty");
         }
         
-        // Initialize map
-        function initMap() {
-            if (map !== null) return; // Only initialize once
-            
-            map = L.map('map', {
-                worldCopyJump: true // Helps with the wrapping behavior
-            }).setView([32.5, -81.2], 6);
-            
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                noWrap: false // Allow the map to repeat horizontally
-            }).addTo(map);
-
-            // Fix icon paths
-            fixLeafletIconPaths();
+        const parts = coordString.split(',').map(v => parseFloat(v.trim()));
+        
+        if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
+            throw new Error("Invalid coordinates format. Please use 'latitude, longitude'");
         }
         
-        // Initialize midpoint map
-        function initMidpointMap() {
-            if (midpointMap !== null) return; // Only initialize once
-            
-            midpointMap = L.map('midpoint_map', {
-                worldCopyJump: true // Helps with the wrapping behavior
-            }).setView([32.5, -81.2], 3);
-            
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors',
-                noWrap: false // Allow the map to repeat horizontally
-            }).addTo(midpointMap);
+        return parts;
+    }
 
-            // Fix icon paths
-            fixLeafletIconPaths();
-        }
+    // Function to normalize coordinates
+    function normalizeCoordinates(lat, lng) {
+        // Constrain latitude to -90 to 90
+        lat = Math.max(-90, Math.min(90, lat));
+        
+        // Normalize longitude to -180 to 180
+        lng = ((lng + 540) % 360) - 180;
+        
+        return [lat, lng];
+    }
 
-        // Tab switching function
-        function switchTab(tabId) {
-            // Hide all tab contents
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Remove active class from all tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show the selected tab content
-            document.getElementById(tabId).classList.add('active');
-            
-            // Add active class to the clicked tab
-            Array.from(document.querySelectorAll('.tab')).find(tab => 
-                tab.textContent.toLowerCase().includes(tabId.split('-')[0])
-            ).classList.add('active');
-            
-            // Initialize appropriate map
-            if (tabId === 'reflect-tab') {
-                setTimeout(() => {
-                    initMap();
-                    updateMarkers();
-                }, 100);
-            } else if (tabId === 'midpoint-tab') {
-                setTimeout(() => {
-                    initMidpointMap();
-                    // Update the map if we already have data
-                    if (document.getElementById('point1_coords').value && 
-                        document.getElementById('point2_coords').value) {
-                        calculateMidpointWithMap();
-                    }
-                }, 100);
-            }
-        }
-
-        // Function to parse coordinates from input string
-        function parseCoordinates(coordString) {
-            if (!coordString || coordString.trim() === '') {
-                throw new Error("Coordinates cannot be empty");
-            }
-            
-            const parts = coordString.split(',').map(v => parseFloat(v.trim()));
-            
-            if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
-                throw new Error("Invalid coordinates format. Please use 'latitude, longitude'");
-            }
-            
-            return parts;
-        }
-
-        // Function to normalize coordinates
-        function normalizeCoordinates(lat, lng) {
-            // Constrain latitude to -90 to 90
-            lat = Math.max(-90, Math.min(90, lat));
-            
-            // Normalize longitude to -180 to 180
-            lng = ((lng + 540) % 360) - 180;
-            
-            return [lat, lng];
-        }
-
-        // Calculate midpoint using the geomidpoint.com method (center of gravity)
-        function calculateGeographicMidpoint(coords) {
-            const toRad = deg => deg * Math.PI / 180;
-            const toDeg = rad => rad * 180 / Math.PI;
+    // Calculate midpoint using the geomidpoint.com method (center of gravity)
+    function calculateGeographicMidpoint(coords) {
+        const toRad = deg => deg * Math.PI / 180;
+        const toDeg = rad => rad * 180 / Math.PI;
+        
+        // Convert to Cartesian coordinates
+        let x = 0, y = 0, z = 0;
+        
+        for (const [lat, lon] of coords) {
+            const phi = toRad(lat);
+            const lambda = toRad(lon);
             
             // Convert to Cartesian coordinates
-            let x = 0, y = 0, z = 0;
-            
-            for (const [lat, lon] of coords) {
-                const phi = toRad(lat);
-                const lambda = toRad(lon);
-                
-                // Convert to Cartesian coordinates
-                x += Math.cos(phi) * Math.cos(lambda);
-                y += Math.cos(phi) * Math.sin(lambda);
-                z += Math.sin(phi);
-            }
-            
-            // Get averages
-            x /= coords.length;
-            y /= coords.length;
-            z /= coords.length;
-            
-            // Convert back to spherical coordinates
-            const lambda = Math.atan2(y, x);
-            const hyp = Math.sqrt(x * x + y * y);
-            const phi = Math.atan2(z, hyp);
-            
-            // Convert to degrees
-            const midLat = toDeg(phi);
-            const midLon = toDeg(lambda);
-            
-            return normalizeCoordinates(midLat, midLon);
+            x += Math.cos(phi) * Math.cos(lambda);
+            y += Math.cos(phi) * Math.sin(lambda);
+            z += Math.sin(phi);
         }
+        
+        // Get averages
+        x /= coords.length;
+        y /= coords.length;
+        z /= coords.length;
+        
+        // Convert back to spherical coordinates
+        const lambda = Math.atan2(y, x);
+        const hyp = Math.sqrt(x * x + y * y);
+        const phi = Math.atan2(z, hyp);
+        
+        // Convert to degrees
+        const midLat = toDeg(phi);
+        const midLon = toDeg(lambda);
+        
+        return normalizeCoordinates(midLat, midLon);
+    }
 
-        // Function to calculate distance between two points (in miles)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = EARTH_RADIUS_MILES; // Earth's radius in miles
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            const distance = R * c;
-            
-            return distance;
+    // Function to calculate distance between two points (in miles)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = EARTH_RADIUS_MILES; // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        
+        return distance;
+    }
+    
+    // Function to check if distance exceeds half of Earth's circumference
+    function isDistanceTooLarge(lat1, lon1, lat2, lon2) {
+        const distance = calculateDistance(lat1, lon1, lat2, lon2);
+        return {
+            isTooLarge: distance > HALF_EARTH_CIRCUMFERENCE / 2, // Half of half circumference (quarter of full)
+            distance: distance
+        };
+    }
+    
+   // Function to add or update a marker on the midpoint map
+function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, customIcon = null) {
+    let options = {};
+    
+    // Use specified icon if provided, otherwise use red icon if specified
+    if (customIcon) {
+        options.icon = customIcon;
+    } else if (useRedIcon) {
+        options.icon = createRedIcon();
+    }
+    
+    if (marker) {
+        marker.setLatLng([lat, lon]);
+        
+        // Update icon if we're changing the icon
+        if ((useRedIcon && !marker.options.icon) || customIcon) {
+            marker.setIcon(customIcon || createRedIcon());
+        }
+    } else {
+        marker = L.marker([lat, lon], options);
+        marker.addTo(midpointMap);
+    }
+    marker.bindPopup(title);
+    return marker;
+}
+    
+    // Improved function to create a distance label that's always on one line
+    function createDistanceLabel(midLat, midLon, distance) {
+        // Remove existing distance label if it exists
+        if (distanceLabel) {
+            midpointMap.removeLayer(distanceLabel);
         }
         
-        // Function to check if distance exceeds half of Earth's circumference
-        function isDistanceTooLarge(lat1, lon1, lat2, lon2) {
-            const distance = calculateDistance(lat1, lon1, lat2, lon2);
-            return {
-                isTooLarge: distance > HALF_EARTH_CIRCUMFERENCE / 2, // Half of half circumference (quarter of full)
-                distance: distance
-            };
-        }
+        // Format the distance with appropriate precision
+        const formattedDistance = distance.toFixed(2);
         
-        // Function to add or update a marker on the midpoint map
-        function addOrUpdateMidpointMarker(marker, lat, lon, title) {
-            if (marker) {
-                marker.setLatLng([lat, lon]);
-            } else {
-                marker = L.marker([lat, lon]);
-                marker.addTo(midpointMap);
+        // Create a div icon with nowrap styling
+        const labelIcon = L.divIcon({
+            className: 'custom-label', // This is ignored, we'll use the html styling
+            html: `<div class="distance-label">${formattedDistance} miles</div>`,
+            iconSize: [null, null], // Auto-size based on content
+            iconAnchor: [50, 10] // Centered horizontally
+        });
+        
+        // Create the marker with the label
+        distanceLabel = L.marker([midLat, midLon], {
+            icon: labelIcon,
+            interactive: false, // Make it non-interactive (can't be clicked)
+            keyboard: false
+        }).addTo(midpointMap);
+        
+        return distanceLabel;
+    }
+    
+    // Function to update the midpoint map display
+    function updateMidpointMap() {
+        try {
+            // Make sure the midpoint map is initialized
+            initMidpointMap();
+                            
+            // Check if we have the necessary data
+            const point1Value = document.getElementById('point1_coords').value.trim();
+            const point2Value = document.getElementById('point2_coords').value.trim();
+            
+            if (!point1Value || !point2Value) {
+                return; // Not enough data to update map
             }
-            marker.bindPopup(title);
-            return marker;
-        }
-        
-        // Improved function to create a distance label that's always on one line
-        function createDistanceLabel(midLat, midLon, distance) {
-            // Remove existing distance label if it exists
+            
+            // Parse point coordinates
+            let [lat1, lon1] = parseCoordinates(point1Value);
+            let [lat2, lon2] = parseCoordinates(point2Value);
+            
+            // Normalize coordinates
+            [lat1, lon1] = normalizeCoordinates(lat1, lon1);
+            [lat2, lon2] = normalizeCoordinates(lat2, lon2);
+            
+            // Calculate midpoint
+            const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
+            
+            // Update or add markers - use red icon for midpoint
+            point1Marker = addOrUpdateMidpointMarker(point1Marker, lat1, lon1, "Point 1", false);
+            point2Marker = addOrUpdateMidpointMarker(point2Marker, lat2, lon2, "Point 2", false);
+            calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint", true);
+            
+            // Check for custom midpoint
+            const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
+            
+            // Remove existing polyline
+            if (distancePolyline) {
+                midpointMap.removeLayer(distancePolyline);
+                distancePolyline = null;
+            }
+            
+            // Remove existing distance label
             if (distanceLabel) {
                 midpointMap.removeLayer(distanceLabel);
+                distanceLabel = null;
             }
             
-            // Format the distance with appropriate precision
-            const formattedDistance = distance.toFixed(2);
-            
-            // Create a div icon with nowrap styling
-            const labelIcon = L.divIcon({
-                className: 'custom-label', // This is ignored, we'll use the html styling
-                html: `<div class="distance-label">${formattedDistance} miles</div>`,
-                iconSize: [null, null], // Auto-size based on content
-                iconAnchor: [50, 10] // Centered horizontally
-            });
-            
-            // Create the marker with the label
-            distanceLabel = L.marker([midLat, midLon], {
-                icon: labelIcon,
-                interactive: false, // Make it non-interactive (can't be clicked)
-                keyboard: false
-            }).addTo(midpointMap);
-            
-            return distanceLabel;
-        }
-        
-        // Function to update the midpoint map display
-        function updateMidpointMap() {
-            try {
-                // Make sure the midpoint map is initialized
-                initMidpointMap();
-                                
-                // Check if we have the necessary data
-                const point1Value = document.getElementById('point1_coords').value.trim();
-                const point2Value = document.getElementById('point2_coords').value.trim();
-                
-                if (!point1Value || !point2Value) {
-                    return; // Not enough data to update map
-                }
-                
-                // Parse point coordinates
-                let [lat1, lon1] = parseCoordinates(point1Value);
-                let [lat2, lon2] = parseCoordinates(point2Value);
-                
-                // Normalize coordinates
-                [lat1, lon1] = normalizeCoordinates(lat1, lon1);
-                [lat2, lon2] = normalizeCoordinates(lat2, lon2);
-                
-                // Calculate midpoint
-                const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
-                
-                // Update or add markers
-                point1Marker = addOrUpdateMidpointMarker(point1Marker, lat1, lon1, "Point 1");
-                point2Marker = addOrUpdateMidpointMarker(point2Marker, lat2, lon2, "Point 2");
-                calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint");
-                
-                // Check for custom midpoint
-                const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
-                
-                // Remove existing polyline
-                if (distancePolyline) {
-                    midpointMap.removeLayer(distancePolyline);
-                    distancePolyline = null;
-                }
-                
-                // Remove existing distance label
-                if (distanceLabel) {
-                    midpointMap.removeLayer(distanceLabel);
-                    distanceLabel = null;
-                }
-                
-                if (customMidpointValue) {
-                    try {
-                        let [customLat, customLon] = parseCoordinates(customMidpointValue);
-                        [customLat, customLon] = normalizeCoordinates(customLat, customLon);
-                        
-                        // Add or update custom midpoint marker
-                        customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat, customLon, "Custom Midpoint");
-                        
-                        // Calculate distance
-                        const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
-                        
-                        // Add polyline
-                        distancePolyline = L.polyline(
-                            [[midLat, midLon], [customLat, customLon]], 
-                            { color: 'red', weight: 3 }
-                        ).addTo(midpointMap);
-                        
-                        // Add improved distance label
-                        const midPoint = [
-                            (midLat + customLat) / 2,
-                            (midLon + customLon) / 2
-                        ];
-                        
-                        createDistanceLabel(midPoint[0], midPoint[1], distanceMiles);
-                        
-                    } catch (err) {
-                        console.error("Error with custom midpoint:", err);
-                        if (customMidpointMarker) {
-                            midpointMap.removeLayer(customMidpointMarker);
-                            customMidpointMarker = null;
-                        }
-                    }
-                } else {
-                    // If no custom midpoint is provided, remove the custom midpoint marker
+            if (customMidpointValue) {
+                try {
+                    let [customLat, customLon] = parseCoordinates(customMidpointValue);
+                    [customLat, customLon] = normalizeCoordinates(customLat, customLon);
+                    
+                    // Add or update custom midpoint marker with gold icon
+customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat, customLon, "Custom Midpoint", false, createGoldIcon());
+                    
+                    // Calculate distance
+                    const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
+                    
+                    // Add polyline
+                    distancePolyline = L.polyline(
+                        [[midLat, midLon], [customLat, customLon]], 
+                        { color: 'red', weight: 3 }
+                    ).addTo(midpointMap);
+                    
+                    // Add improved distance label
+                    const midPoint = [
+                        (midLat + customLat) / 2,
+                        (midLon + customLon) / 2
+                    ];
+                    
+                    createDistanceLabel(midPoint[0], midPoint[1], distanceMiles);
+                    
+                } catch (err) {
+                    console.error("Error with custom midpoint:", err);
                     if (customMidpointMarker) {
                         midpointMap.removeLayer(customMidpointMarker);
                         customMidpointMarker = null;
                     }
                 }
-                
-                // Create a group with all valid markers to fit the map view
-                const markersToInclude = [point1Marker, point2Marker, calculatedMidpointMarker];
-                if (customMidpointMarker) markersToInclude.push(customMidpointMarker);
-                
-                const group = new L.featureGroup(markersToInclude);
-                midpointMap.fitBounds(group.getBounds().pad(0.3));
-                
-            } catch (error) {
-                console.error("Error updating midpoint map:", error);
-                document.getElementById('midpoint_result').innerHTML = `
-                    <h3>Error:</h3>
-                    <strong>${error.message}</strong>
-                `;
-            }
-        }
-
-        // Function to handle midpoint calculation with map update
-        function calculateMidpointWithMap() {
-            try {
-                // This calls the original calculation function
-                calculateMidpoint();
-                
-                // Then updates the map
-                updateMidpointMap();
-                
-            } catch (error) {
-                console.error("Error calculating midpoint with map:", error);
-            }
-        }
-
-        // Function to handle midpoint calculation
-        function calculateMidpoint() {
-            try {
-                // Get input values
-                let [lat1, lon1] = parseCoordinates(document.getElementById('point1_coords').value);
-                let [lat2, lon2] = parseCoordinates(document.getElementById('point2_coords').value);
-                
-                // Normalize coordinates
-                [lat1, lon1] = normalizeCoordinates(lat1, lon1);
-                [lat2, lon2] = normalizeCoordinates(lat2, lon2);
-                
-                // Update input fields with normalized values
-                document.getElementById('point1_coords').value = `${lat1.toFixed(6)}, ${lon1.toFixed(6)}`;
-                document.getElementById('point2_coords').value = `${lat2.toFixed(6)}, ${lon2.toFixed(6)}`;
-                
-                // Calculate midpoint
-                const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
-                
-                let resultHTML = `
-                    <h3>Midpoint Results:</h3>
-                    <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
-                    <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
-                    <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
-                `;
-                
-                // Check if custom midpoint was provided
-                const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
-                if (customMidpointValue) {
-                    try {
-                        let [customLat, customLon] = parseCoordinates(customMidpointValue);
-                        
-                        [customLat, customLon] = normalizeCoordinates(customLat, customLon);
-                        document.getElementById('custom_midpoint').value = `${customLat.toFixed(6)}, ${customLon.toFixed(6)}`;
-                        
-                        const customDistance = calculateDistance(midLat, midLon, customLat, customLon);
-                        resultHTML += `<br><strong>Distance between calculated midpoint and custom midpoint:</strong> ${customDistance.toFixed(2)} miles`;
-                    } catch (err) {
-                        resultHTML += `<br><span style="color: red;">Error with custom midpoint: ${err.message}</span>`;
-                    }
-                }
-                
-                document.getElementById('midpoint_result').innerHTML = resultHTML;
-                
-            } catch (error) {
-                document.getElementById('midpoint_result').innerHTML = `
-                    <h3>Error:</h3>
-                    <strong>${error.message}</strong>
-                `;
-            }
-        }
-
-        // Improved inverse midpoint function using vector-based calculation
-        function improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon) {
-            const toRad = deg => deg * Math.PI / 180;
-            const toDeg = rad => rad * 180 / Math.PI;
-
-            const φ1 = toRad(a_lat);
-            const λ1 = toRad(a_lon);
-            const φ2 = toRad(m_lat);
-            const λ2 = toRad(m_lon);
-
-            // Calculate angular distance between point A and midpoint
-            const Δφ = φ2 - φ1;
-            const Δλ = λ2 - λ1;
-            const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-            const angularDistance = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-            // Check for antipodal points (distance close to π radians or 180 degrees)
-            if (Math.abs(angularDistance - Math.PI) < 1e-10) {
-                return [null, null]; // Reflection is undefined for antipodal points
-            }
-
-            // Check if points are identical or very close
-            if (angularDistance < 1e-10) {
-                return [null, null]; // Cannot determine reflection direction
-            }
-
-            // Calculate initial bearing from point A to midpoint
-            const y = Math.sin(Δλ) * Math.cos(φ2);
-            const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
-            const θ = Math.atan2(y, x);
-
-            // Continue along the same great circle for the same distance to get reflected point
-            // Double the angular distance from A to M
-            const δ = 2 * angularDistance;
-            
-            // If this exceeds 180 degrees, we need to warn about potential issues
-            if (δ > Math.PI) {
-                console.warn("Warning: Reflected point is more than 180° from the original point");
-            }
-
-            // Calculate the destination point
-            const φ3 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(θ));
-            const λ3 = λ1 + Math.atan2(Math.sin(θ)*Math.sin(δ)*Math.cos(φ1), 
-                                      Math.cos(δ) - Math.sin(φ1)*Math.sin(φ3));
-
-            // Convert back to degrees
-            let b_lat = toDeg(φ3);
-            let b_lon = toDeg(λ3);
-            
-            // Normalize longitude to -180 to 180
-            b_lon = ((b_lon + 540) % 360) - 180;
-
-            return [b_lat, b_lon];
-        }
-
-        // Helper function to add or move markers
-        function addOrMoveMarker(marker, lat, lon, options, onDragEnd) {
-            if (marker) {
-                marker.setLatLng([lat, lon]);
             } else {
-                marker = L.marker([lat, lon], options);
-                if (onDragEnd) marker.on('dragend', onDragEnd);
-                marker.addTo(map);
+                // If no custom midpoint is provided, remove the custom midpoint marker
+                if (customMidpointMarker) {
+                    midpointMap.removeLayer(customMidpointMarker);
+                    customMidpointMarker = null;
+                }
             }
-            return marker;
+            
+            // Create a group with all valid markers to fit the map view
+            const markersToInclude = [point1Marker, point2Marker, calculatedMidpointMarker];
+            if (customMidpointMarker) markersToInclude.push(customMidpointMarker);
+            
+            const group = new L.featureGroup(markersToInclude);
+            midpointMap.fitBounds(group.getBounds().pad(0.3));
+            
+        } catch (error) {
+            console.error("Error updating midpoint map:", error);
+            document.getElementById('midpoint_result').innerHTML = `
+                <h3>Error:</h3>
+                <strong>${error.message}</strong>
+            `;
+        }
+    }
+
+    // Function to handle midpoint calculation with map update
+    function calculateMidpointWithMap() {
+        try {
+            // This calls the original calculation function
+            calculateMidpoint();
+            
+            // Then updates the map
+            updateMidpointMap();
+            
+        } catch (error) {
+            console.error("Error calculating midpoint with map:", error);
+        }
+    }
+
+    // Function to handle midpoint calculation
+    function calculateMidpoint() {
+        try {
+            // Get input values
+            let [lat1, lon1] = parseCoordinates(document.getElementById('point1_coords').value);
+            let [lat2, lon2] = parseCoordinates(document.getElementById('point2_coords').value);
+            
+            // Normalize coordinates
+            [lat1, lon1] = normalizeCoordinates(lat1, lon1);
+            [lat2, lon2] = normalizeCoordinates(lat2, lon2);
+            
+            // Update input fields with normalized values
+            document.getElementById('point1_coords').value = `${lat1.toFixed(6)}, ${lon1.toFixed(6)}`;
+            document.getElementById('point2_coords').value = `${lat2.toFixed(6)}, ${lon2.toFixed(6)}`;
+            
+            // Calculate midpoint
+            const [midLat, midLon] = calculateGeographicMidpoint([[lat1, lon1], [lat2, lon2]]);
+            
+            let resultHTML = `
+                <h3>Midpoint Results:</h3>
+                <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
+                <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
+                <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
+            `;
+            
+            // Check if custom midpoint was provided
+            const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
+            if (customMidpointValue) {
+                try {
+                    let [customLat, customLon] = parseCoordinates(customMidpointValue);
+                    
+                    [customLat, customLon] = normalizeCoordinates(customLat, customLon);
+                    document.getElementById('custom_midpoint').value = `${customLat.toFixed(6)}, ${customLon.toFixed(6)}`;
+                    
+                    const customDistance = calculateDistance(midLat, midLon, customLat, customLon);
+                    resultHTML += `<br><strong>Distance between calculated midpoint and custom midpoint:</strong> ${customDistance.toFixed(2)} miles`;
+                } catch (err) {
+                    resultHTML += `<br><span style="color: red;">Error with custom midpoint: ${err.message}</span>`;
+                }
+            }
+            
+            document.getElementById('midpoint_result').innerHTML = resultHTML;
+            
+        } catch (error) {
+            document.getElementById('midpoint_result').innerHTML = `
+                <h3>Error:</h3>
+                <strong>${error.message}</strong>
+            `;
+        }
+    }
+
+    // Improved inverse midpoint function using vector-based calculation
+    function improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon) {
+        const toRad = deg => deg * Math.PI / 180;
+        const toDeg = rad => rad * 180 / Math.PI;
+
+        const φ1 = toRad(a_lat);
+        const λ1 = toRad(a_lon);
+        const φ2 = toRad(m_lat);
+        const λ2 = toRad(m_lon);
+
+        // Calculate angular distance between point A and midpoint
+        const Δφ = φ2 - φ1;
+        const Δλ = λ2 - λ1;
+        const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+        const angularDistance = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        // Check for antipodal points (distance close to π radians or 180 degrees)
+        if (Math.abs(angularDistance - Math.PI) < 1e-10) {
+            return [null, null]; // Reflection is undefined for antipodal points
         }
 
-        // Update markers for the reflection calculator
-        function updateMarkers() {
+        // Check if points are identical or very close
+        if (angularDistance < 1e-10) {
+            return [null, null]; // Cannot determine reflection direction
+        }
+
+        // Calculate initial bearing from point A to midpoint
+        const y = Math.sin(Δλ) * Math.cos(φ2);
+        const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+        const θ = Math.atan2(y, x);
+
+        // Continue along the same great circle for the same distance to get reflected point
+        // Double the angular distance from A to M
+        const δ = 2 * angularDistance;
+        
+        // If this exceeds 180 degrees, we need to warn about potential issues
+        if (δ > Math.PI) {
+            console.warn("Warning: Reflected point is more than 180° from the original point");
+        }
+
+        // Calculate the destination point
+        const φ3 = Math.asin(Math.sin(φ1)*Math.cos(δ) + Math.cos(φ1)*Math.sin(δ)*Math.cos(θ));
+        const λ3 = λ1 + Math.atan2(Math.sin(θ)*Math.sin(δ)*Math.cos(φ1), 
+                                  Math.cos(δ) - Math.sin(φ1)*Math.sin(φ3));
+
+        // Convert back to degrees
+        let b_lat = toDeg(φ3);
+        let b_lon = toDeg(λ3);
+        
+        // Normalize longitude to -180 to 180
+        b_lon = ((b_lon + 540) % 360) - 180;
+
+        return [b_lat, b_lon];
+    }
+
+    // Helper function to add or move markers
+    function addOrMoveMarker(marker, lat, lon, options, onDragEnd) {
+        if (marker) {
+            marker.setLatLng([lat, lon]);
+            
+            // Update icon if specified in options and different from current
+            if (options.icon && (!marker.options.icon || marker.options.icon !== options.icon)) {
+                marker.setIcon(options.icon);
+            }
+        } else {
+            marker = L.marker([lat, lon], options);
+            if (onDragEnd) marker.on('dragend', onDragEnd);
+            marker.addTo(map);
+        }
+        return marker;
+    }
+
+    // Update markers for the reflection calculator
+    function updateMarkers() {
+        try {
+            // Initialize map if not already initialized
+            initMap();
+            
+            // Clear any existing warning
+            document.getElementById('distance-warning').innerHTML = '';
+            
+            // Get input values
             try {
-                // Initialize map if not already initialized
-                initMap();
-                
-                // Clear any existing warning
-                document.getElementById('distance-warning').innerHTML = '';
-                
-                // Get input values
-                try {
-                    var [a_lat, a_lon] = parseCoordinates(document.getElementById('a_coords').value);
-                    var [m_lat, m_lon] = parseCoordinates(document.getElementById('m_coords').value);
-                } catch (error) {
-                    document.getElementById('result').innerHTML = `
-                        <h3>Error:</h3>
-                        <strong>${error.message}</strong>
-                    `;
-                    return;
-                }
-                
-                // Normalize the input coordinates
-                [a_lat, a_lon] = normalizeCoordinates(a_lat, a_lon);
-                [m_lat, m_lon] = normalizeCoordinates(m_lat, m_lon);
-                
-                // Update the input fields with normalized values
-                document.getElementById('a_coords').value = `${a_lat.toFixed(6)}, ${a_lon.toFixed(6)}`;
-                document.getElementById('m_coords').value = `${m_lat.toFixed(6)}, ${m_lon.toFixed(6)}`;
-                
-                // Check if distance is too large (more than a quarter of Earth's circumference)
-                const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
-                
-                if (isTooLarge) {
-                    // Show warning
-                    document.getElementById('distance-warning').innerHTML = `
-                        <div class="warning-box">
-                            <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
-                            is very large. For points this far apart, the reflected point calculation may not be what you expect.
-                            The true shortest path midpoint would be along a different great circle path.
-                        </div>
-                    `;
-                }
-                
-                // Calculate inverse midpoint
-                const [b_lat, b_lon] = improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon);
-                
-                if (b_lat === null || b_lon === null) {
-                    document.getElementById('result').innerHTML = `
-                        <h3>Error:</h3>
-                        <strong>Cannot calculate reflected point:</strong> 
-                        Points are either too close or antipodal (opposite sides of Earth).
-                        Please choose different points.
-                    `;
-                    return;
-                }
-                
-                // Add or move markers
-                markerA = addOrMoveMarker(markerA, a_lat, a_lon, {draggable: true, title: "Point A"}, function(e) {
-                    const pos = e.target.getLatLng();
-                    // Normalize the coordinates when marker is dragged
-                    const [normalizedLat, normalizedLng] = normalizeCoordinates(pos.lat, pos.lng);
-                    document.getElementById('a_coords').value = `${normalizedLat.toFixed(6)}, ${normalizedLng.toFixed(6)}`;
-                    // Update the marker position with normalized coordinates
-                    e.target.setLatLng([normalizedLat, normalizedLng]);
-                    updateMarkers();
-                });
-                markerA.bindPopup("Point A").openPopup();
-                
-                markerM = addOrMoveMarker(markerM, m_lat, m_lon, {draggable: true, title: "Midpoint"}, function(e) {
-                    const pos = e.target.getLatLng();
-                    // Normalize the coordinates when marker is dragged
-                    const [normalizedLat, normalizedLng] = normalizeCoordinates(pos.lat, pos.lng);
-                    document.getElementById('m_coords').value = `${normalizedLat.toFixed(6)}, ${normalizedLng.toFixed(6)}`;
-                    // Update the marker position with normalized coordinates
-                    e.target.setLatLng([normalizedLat, normalizedLng]);
-                    updateMarkers();
-                });
-                markerM.bindPopup("Midpoint");
-                
-                markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Reflected Point"});
-                markerB.bindPopup("Reflected Point");
-                
-                // Fit map to show all points
-                const group = new L.featureGroup([markerA, markerM, markerB]);
-                map.fitBounds(group.getBounds().pad(0.3));
-                
-                // Show result
-                document.getElementById('result').innerHTML = `
-                    <h3>Results:</h3>
-                    <strong>Reflected Point Coordinates:</strong> ${b_lat.toFixed(6)}, ${b_lon.toFixed(6)}<br>
-                    <a href="https://www.google.com/maps/place/${b_lat},${b_lon}" target="_blank">View on Google Maps</a>
-                `;
+                var [a_lat, a_lon] = parseCoordinates(document.getElementById('a_coords').value);
+                var [m_lat, m_lon] = parseCoordinates(document.getElementById('m_coords').value);
             } catch (error) {
                 document.getElementById('result').innerHTML = `
                     <h3>Error:</h3>
                     <strong>${error.message}</strong>
                 `;
+                return;
             }
+            
+            // Normalize the input coordinates
+            [a_lat, a_lon] = normalizeCoordinates(a_lat, a_lon);
+            [m_lat, m_lon] = normalizeCoordinates(m_lat, m_lon);
+            
+            // Update the input fields with normalized values
+            document.getElementById('a_coords').value = `${a_lat.toFixed(6)}, ${a_lon.toFixed(6)}`;
+            document.getElementById('m_coords').value = `${m_lat.toFixed(6)}, ${m_lon.toFixed(6)}`;
+            
+            // Check if distance is too large (more than a quarter of Earth's circumference)
+            const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
+            
+            if (isTooLarge) {
+                // Show warning
+                document.getElementById('distance-warning').innerHTML = `
+                    <div class="warning-box">
+                        <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
+                        is very large. For points this far apart, the reflected point calculation may not be what you expect.
+                        The true shortest path midpoint would be along a different great circle path.
+                    </div>
+                `;
+            }
+            
+            // Calculate inverse midpoint
+            const [b_lat, b_lon] = improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon);
+            
+            if (b_lat === null || b_lon === null) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <strong>Cannot calculate reflected point:</strong> 
+                    Points are either too close or antipodal (opposite sides of Earth).
+                    Please choose different points.
+                `;
+                return;
+            }
+            
+            // Create a red icon for the midpoint
+            const redIcon = createRedIcon();
+            
+            // Add or move markers - use red icon for midpoint
+            markerA = addOrMoveMarker(markerA, a_lat, a_lon, {draggable: true, title: "Point A"}, function(e) {
+                const pos = e.target.getLatLng();
+                // Normalize the coordinates when marker is dragged
+                const [normalizedLat, normalizedLng] = normalizeCoordinates(pos.lat, pos.lng);
+                document.getElementById('a_coords').value = `${normalizedLat.toFixed(6)}, ${normalizedLng.toFixed(6)}`;
+                // Update the marker position with normalized coordinates
+                e.target.setLatLng([normalizedLat, normalizedLng]);
+                updateMarkers();
+            });
+            markerA.bindPopup("Point A").openPopup();
+            
+            markerM = addOrMoveMarker(markerM, m_lat, m_lon, {draggable: true, title: "Midpoint", icon: redIcon}, function(e) {
+                const pos = e.target.getLatLng();
+                // Normalize the coordinates when marker is dragged
+                const [normalizedLat, normalizedLng] = normalizeCoordinates(pos.lat, pos.lng);
+                document.getElementById('m_coords').value = `${normalizedLat.toFixed(6)}, ${normalizedLng.toFixed(6)}`;
+                // Update the marker position with normalized coordinates
+                e.target.setLatLng([normalizedLat, normalizedLng]);
+                updateMarkers();
+            });
+            markerM.bindPopup("Midpoint");
+            
+            markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Reflected Point"});
+            markerB.bindPopup("Reflected Point");
+            
+            // Fit map to show all points
+            const group = new L.featureGroup([markerA, markerM, markerB]);
+            map.fitBounds(group.getBounds().pad(0.3));
+            
+            // Show result
+            document.getElementById('result').innerHTML = `
+                <h3>Results:</h3>
+                <strong>Reflected Point Coordinates:</strong> ${b_lat.toFixed(6)}, ${b_lon.toFixed(6)}<br>
+                <a href="https://www.google.com/maps/place/${b_lat},${b_lon}" target="_blank">View on Google Maps</a>
+            `;
+        } catch (error) {
+            document.getElementById('result').innerHTML = `
+                <h3>Error:</h3>
+                <strong>${error.message}</strong>
+            `;
         }
+    }
+
 // Global variables for batch processing
 let batchMap = null;
 let batchResults = [];
@@ -1065,9 +1141,13 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     
     // Add active class to the clicked tab
-    Array.from(document.querySelectorAll('.tab')).find(tab => 
-        tab.textContent.toLowerCase().includes(tabId.split('-')[0])
-    ).classList.add('active');
+    if (tabId === 'reflect-tab') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+    } else if (tabId === 'midpoint-tab') {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+    } else if (tabId === 'batch-tab') {
+        document.querySelector('.tab:nth-child(3)').classList.add('active');
+    }
     
     // Initialize appropriate map
     if (tabId === 'reflect-tab') {
