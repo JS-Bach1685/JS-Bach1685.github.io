@@ -18,26 +18,25 @@
 	    
 	.leaflet-popup {
            width: max-content !important;
-     	   max-width: 300px !important;
-	}
+     		}
 	.leaflet-popup-content-wrapper {
 	  padding: 4px 6px !important;
-	  border-radius: 6px !important;
+	  border-radius: 8px !important;
 	  background-color: rgba(255, 255, 255, 0.9) !important;
 	}
 
 	.leaflet-popup-content {
-	  margin: 1px !important;
+	  margin: 2px !important;
 	  font-size: 12px !important;
 	  line-height: 1.2 !important;
-	  padding: 1px 7px 1px 1px !important;
+	  padding: 1px 9px 1px 1px !important;
 	  max-width: 100% !important;
 	}
 	
  	.leaflet-popup-tip {
 	  width: 5px !important;
 	  height: 6px !important;
-	  margin: -5px auto 0 !important;
+	  margin: -3px auto 0 !important;
 	  transform: rotate(45deg) !important;
 	}
 
@@ -1034,7 +1033,7 @@ function displayBatchResults(targetLat, targetLon) {
     // Create result HTML
     let resultHTML = `
         <h3>Top 5 Closest Matches:</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        < style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tr>
                 <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Rank</th>
                 <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 1</th>
@@ -1066,11 +1065,11 @@ function displayBatchResults(targetLat, targetLon) {
         
         resultHTML += `
             <tr>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${index + 1}</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point1.name} (${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point2.name} (${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(2)} miles</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">${index + 1}</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">${point1.name} (${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">${point2.name} (${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">${distance.toFixed(2)} miles</td>
             </tr>
         `;
         
@@ -1121,7 +1120,7 @@ function displayBatchResults(targetLat, targetLon) {
         }
     });
     
-    resultHTML += '</table>';
+    resultHTML += '</>';
     document.getElementById('batch_result').innerHTML = resultHTML;
     
     // Fit map to markers
