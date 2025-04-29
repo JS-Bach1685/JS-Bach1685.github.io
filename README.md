@@ -17,24 +17,24 @@
         }
 
 	.leaflet-popup-content-wrapper {
-	  padding: 4px 6px;
-	  border-radius: 6px;
-	  max-width: 300px;
+	  padding: 4px 6px; !important
+	  border-radius: 6px; !important
+	  max-width: 300px; !important
 	}
 
 	.leaflet-popup-content {
-	  margin: 1;
-	  font-size: 12px;
-	  line-height: 1.2;
-	  padding: 1; 
-	  padding-right: 7px; 
+	  margin: 1; !important
+	  font-size: 12px; !important
+	  line-height: 1.2; !important
+	  padding: 1; !important  
+	  padding-right: 7px; !important
 	}
 
 	.leaflet-popup-tip {
-	  width: 5px;
-	  height: 6px;
-	  margin: -5px auto 0;
-	  transform: rotate(45deg);
+	  width: 5px; !important
+	  height: 6px; !important
+	  margin: -5px auto 0; !important
+	  transform: rotate(45deg); !important
 	}
 
         .tabs {
