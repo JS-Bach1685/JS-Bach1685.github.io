@@ -1033,7 +1033,7 @@ function displayBatchResults(targetLat, targetLon) {
     // Create result HTML
     let resultHTML = `
        <h3>Top 5 Closest Matches:</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
             <tr>
                 <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Rank</th>
                 <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 1</th>
