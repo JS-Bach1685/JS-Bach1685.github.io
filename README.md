@@ -17,9 +17,9 @@
         }
 
 	.leaflet-popup-content-wrapper {
-	  padding: 4px 6px; /* slight padding around the box */
+	  padding: 4px 6px;
 	  border-radius: 6px;
-	  max-width: 300px; /* medium size: not too wide, not too tight */
+	  max-width: 300px;
 	}
 
 	.leaflet-popup-content {
