@@ -15,24 +15,26 @@
             background-color: transparent !important;
             background: transparent !important;
         }
-
+	    
+	.leaflet-popup {
+           width: max-content !important;
+     	   max-width: 300px !important;
+	}
 	.leaflet-popup-content-wrapper {
 	  padding: 4px 6px !important;
 	  border-radius: 6px !important;
-	  max-width: 300px !important;
-   	  background-color: rgba(255, 255, 255, 0.9) !important;
+	  background-color: rgba(255, 255, 255, 0.9) !important;
 	}
 
 	.leaflet-popup-content {
-	  margin: 1 !important;
+	  margin: 1px !important;
 	  font-size: 12px !important;
 	  line-height: 1.2 !important;
-	  padding: 1 !important;
-	  padding-right: 7px !important;
-   	  max-width: 100% !important;
+	  padding: 1px 7px 1px 1px !important;
+	  max-width: 100% !important;
 	}
-
-	.leaflet-popup-tip {
+	
+ 	.leaflet-popup-tip {
 	  width: 5px !important;
 	  height: 6px !important;
 	  margin: -5px auto 0 !important;
