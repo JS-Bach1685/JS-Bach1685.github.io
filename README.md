@@ -1032,17 +1032,17 @@ function displayBatchResults(targetLat, targetLon) {
     
     // Create result HTML
     let resultHTML = `
-        <h3>Top 5 Closest Matches:</h3>
-        < style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+       <h3>Top 5 Closest Matches:</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px;">
             <tr>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">Rank</th>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">Point 1</th>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">Point 2</th>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">Midpoint</th>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px;">Distance to Target</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Rank</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 1</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Point 2</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Midpoint</th>
+                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Distance to Target</th>
             </tr>
     `;
-    
+   
     // Add markers for target point
     const targetIcon = new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -1066,8 +1066,14 @@ function displayBatchResults(targetLat, targetLon) {
         resultHTML += `
             <tr>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${index + 1}</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point1.name} (${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${point2.name} (${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">
+                    <div>${point1.name}</div>
+                    <div><small>(${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</small></div>
+                </td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">
+                    <div>${point2.name}</div>
+                    <div><small>(${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</small></div>
+                </td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(2)} miles</td>
             </tr>
