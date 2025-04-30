@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        #map { height: 500px; margin-bottom: 1em; }
+        #map { height: 500px; 
+	      margin-top: 1em
+	      margin-bottom: 1em;
+	}
+	#map.warning {
+	  border: 4px solid #ff4d4f;
+	  box-shadow: 0 0 15px 6px rgba(255, 77, 79, 0.5);
+	  transition: box-shadow 0.3s ease, border 0.3s ease;
+	}
         #midpoint_map { height: 500px; margin: 20px 0; }
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
@@ -740,20 +748,35 @@ customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat
             document.getElementById('a_coords').value = `${a_lat.toFixed(6)}, ${a_lon.toFixed(6)}`;
             document.getElementById('m_coords').value = `${m_lat.toFixed(6)}, ${m_lon.toFixed(6)}`;
             
-            // Check if distance is too large (more than a quarter of Earth's circumference)
-            const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
-            
-            if (isTooLarge) {
-                // Show warning
-                document.getElementById('distance-warning').innerHTML = `
-                    <div class="warning-box">
-                        <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
-                        is very large. For points this far apart, the reflected point calculation may not be what you expect.
-                        The true shortest path midpoint would be along a different great circle path.
-                    </div>
-                `;
-            }
-            
+          // Check if distance is too large (more than a quarter of Earth's circumference)
+const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
+
+const warningBox = document.getElementById('distance-warning');
+const mapElement = document.getElementById('map');
+
+if (isTooLarge) {
+    // Show warning
+    warningBox.innerHTML = `
+        <div class="warning-box">
+            <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
+            is very large. For points this far apart, the reflected point calculation may not be what you expect.
+            The true shortest path midpoint would be along a different great circle path.
+        </div>
+    `;
+
+    // Add red glow to the map
+    mapElement.classList.add('warning');
+
+    // Optional: vibrate on mobile
+    if ('vibrate' in navigator) navigator.vibrate(200);
+
+} else {
+    // Clear warning
+    warningBox.innerHTML = '';
+    
+    // Remove red glow
+    mapElement.classList.remove('warning');
+}            
             // Calculate inverse midpoint
             const [b_lat, b_lon] = improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon);
             
