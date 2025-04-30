@@ -165,6 +165,7 @@
         </div>
         <button onclick="calculateMidpointWithMap()">Calculate Midpoint</button>
         <div id="midpoint_map"></div>
+		<h2>Please press the Calculate Midpoint button after you drag any of the markers</h2>
         <div id="midpoint_result" class="result-box"></div>
     </div>
 
