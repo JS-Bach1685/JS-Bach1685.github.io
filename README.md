@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        #map { height: 500px; 
-	      margin-top: 1em
-	      margin-bottom: 1em;
+        #map { 
+	     height: 500px;
+	     margin-top: 1em 
+	     margin-bottom: 1em; 
 	}
 	#map.warning {
 	  border: 4px solid #ff4d4f;
 	  box-shadow: 0 0 15px 6px rgba(255, 77, 79, 0.5);
 	  transition: box-shadow 0.3s ease, border 0.3s ease;
 	}
-        #midpoint_map { height: 500px; margin: 20px 0; }
+	#midpoint_map { height: 500px; margin: 20px 0; }
         .input-group { margin: 10px 0; }
         label { display: inline-block; width: 120px; }
         body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -128,7 +129,7 @@
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <p>You can also drag & drop Point A or the Midpoint</p>
         <p>Refresh the page if the map looks wonky</p>
-        <div class="input-group">
+                <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
             <input type="text" id="a_coords" value="41.02201, -83.92215" placeholder="lat, lon">
@@ -138,9 +139,9 @@
             <label>Coordinates:</label>
             <input type="text" id="m_coords" value="42.48927, -95.54477" placeholder="lat, lon">
         </div>
-	<button onclick="updateMarkers()">Calculate Reflected Point</button>
+        <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="distance-warning"></div>
-	<div id="map"></div>
+        <div id="map"></div>
         <div id="result" class="result-box"></div>
     </div>
     
@@ -429,7 +430,9 @@ function createGoldIcon() {
     
    // Function to add or update a marker on the midpoint map
 function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, customIcon = null) {
-    let options = {};
+    let options = {
+        draggable: true
+    };
     
     // Use specified icon if provided, otherwise use red icon if specified
     if (customIcon) {
@@ -509,7 +512,19 @@ function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, 
             // Update or add markers - use red icon for midpoint
             point1Marker = addOrUpdateMidpointMarker(point1Marker, lat1, lon1, "Point 1", false);
             point2Marker = addOrUpdateMidpointMarker(point2Marker, lat2, lon2, "Point 2", false);
-            calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint", true);
+            
+// Add drag event listeners to recalculate midpoint
+point1Marker.on('dragend', function(e) {
+    const pos = e.target.getLatLng();
+    document.getElementById('point1_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+    updateMidpointMap();
+});
+point2Marker.on('dragend', function(e) {
+    const pos = e.target.getLatLng();
+    document.getElementById('point2_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+    updateMidpointMap();
+});
+calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint", true);
             
             // Check for custom midpoint
             const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
@@ -747,8 +762,8 @@ customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat
             // Update the input fields with normalized values
             document.getElementById('a_coords').value = `${a_lat.toFixed(6)}, ${a_lon.toFixed(6)}`;
             document.getElementById('m_coords').value = `${m_lat.toFixed(6)}, ${m_lon.toFixed(6)}`;
-            
-          // Check if distance is too large (more than a quarter of Earth's circumference)
+           
+// Check if distance is too large (more than a quarter of Earth's circumference)
 const { isTooLarge, distance } = isDistanceTooLarge(a_lat, a_lon, m_lat, m_lon);
 
 const warningBox = document.getElementById('distance-warning');
@@ -776,7 +791,9 @@ if (isTooLarge) {
     
     // Remove red glow
     mapElement.classList.remove('warning');
-}            
+}
+
+            
             // Calculate inverse midpoint
             const [b_lat, b_lon] = improvedInverseMidpoint(a_lat, a_lon, m_lat, m_lon);
             
