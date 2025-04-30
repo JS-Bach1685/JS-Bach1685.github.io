@@ -165,7 +165,6 @@
         </div>
         <button onclick="calculateMidpointWithMap()">Calculate Midpoint</button>
         <div id="midpoint_map"></div>
-		<h2>Please press the Calculate Midpoint button after you drag any of the markers</h2>
         <div id="midpoint_result" class="result-box"></div>
     </div>
 
@@ -432,8 +431,13 @@ function createGoldIcon() {
    // Function to add or update a marker on the midpoint map
 function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, customIcon = null) {
     let options = {
-        draggable: true
+        draggable: false
     };
+
+   // Make points 1 and 2 draggable, but not the midpoints
+    if (title === "Point 1" || title === "Point 2") {
+        options.draggable = true;
+    }
     
     // Use specified icon if provided, otherwise use red icon if specified
     if (customIcon) {
@@ -449,6 +453,15 @@ function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, 
         if ((useRedIcon && !marker.options.icon) || customIcon) {
             marker.setIcon(customIcon || createRedIcon());
         }
+
+ // Update draggable property if it changed
+        if (marker.options.draggable !== options.draggable) {
+            // We need to recreate the marker if draggable property changes
+            marker.remove();
+            marker = L.marker([lat, lon], options);
+            marker.addTo(midpointMap);
+        }
+
     } else {
         marker = L.marker([lat, lon], options);
         marker.addTo(midpointMap);
@@ -457,6 +470,20 @@ function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, 
     return marker;
 }
     
+// Throttle function to reduce number of updates during dragging
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
     // Improved function to create a distance label that's always on one line
     function createDistanceLabel(midLat, midLon, distance) {
         // Remove existing distance label if it exists
@@ -480,8 +507,7 @@ function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, 
             icon: labelIcon,
             interactive: false, // Make it non-interactive (can't be clicked)
             keyboard: false
-        }).addTo(midpointMap);
-        
+        }).addTo(midpointMap);        
         return distanceLabel;
     }
     
@@ -513,20 +539,45 @@ function addOrUpdateMidpointMarker(marker, lat, lon, title, useRedIcon = false, 
             // Update or add markers - use red icon for midpoint
             point1Marker = addOrUpdateMidpointMarker(point1Marker, lat1, lon1, "Point 1", false);
             point2Marker = addOrUpdateMidpointMarker(point2Marker, lat2, lon2, "Point 2", false);
-            
+            calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint", true);
+   
 // Add drag event listeners to recalculate midpoint
-point1Marker.on('dragend', function(e) {
-    const pos = e.target.getLatLng();
-    document.getElementById('point1_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-    updateMidpointMap();
-});
-point2Marker.on('dragend', function(e) {
-    const pos = e.target.getLatLng();
-    document.getElementById('point2_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-    updateMidpointMap();
-});
-calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, midLat, midLon, "Calculated Midpoint", true);
+        if (point1Marker) {
+            // Remove existing listeners first to avoid duplicates
+            point1Marker.off('dragend');
+            point1Marker.off('drag');
             
+            // Add new listeners
+            point1Marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('point1_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+                calculateMidpointWithMap();
+            });
+            
+            point1Marker.on('drag', throttle(function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('point1_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+            }, 100));
+        }
+        
+        if (point2Marker) {
+            // Remove existing listeners first to avoid duplicates
+            point2Marker.off('dragend');
+            point2Marker.off('drag');
+            
+            // Add new listeners
+            point2Marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('point2_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+                calculateMidpointWithMap();
+            });
+            
+            point2Marker.on('drag', throttle(function(e) {
+                const pos = e.target.getLatLng();
+                document.getElementById('point2_coords').value = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+            }, 100));
+        }
+
             // Check for custom midpoint
             const customMidpointValue = document.getElementById('custom_midpoint').value.trim();
             
@@ -548,7 +599,7 @@ calculatedMidpointMarker = addOrUpdateMidpointMarker(calculatedMidpointMarker, m
                     [customLat, customLon] = normalizeCoordinates(customLat, customLon);
                     
                     // Add or update custom midpoint marker with gold icon
-customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat, customLon, "Custom Midpoint", false, createGoldIcon());
+		    customMidpointMarker = addOrUpdateMidpointMarker(customMidpointMarker, customLat, customLon, "Custom Midpoint", false, createGoldIcon());
                     
                     // Calculate distance
                     const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
@@ -1175,7 +1226,7 @@ function displayBatchResults(targetLat, targetLon) {
     batchMap.fitBounds(group.getBounds().pad(0.3));
 }
 
-// Update tab switching function to include batch tab
+// Improved tab switching function to ensure maps load properly
 function switchTab(tabId) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
@@ -1191,45 +1242,37 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     
     // Add active class to the clicked tab
-    if (tabId === 'reflect-tab') {
-        document.querySelector('.tab:nth-child(1)').classList.add('active');
-    } else if (tabId === 'midpoint-tab') {
-        document.querySelector('.tab:nth-child(2)').classList.add('active');
-    } else if (tabId === 'batch-tab') {
-        document.querySelector('.tab:nth-child(3)').classList.add('active');
-    }
+    Array.from(document.querySelectorAll('.tab')).find(tab => 
+        tab.textContent.toLowerCase().includes(tabId.split('-')[0])
+    ).classList.add('active');
     
-    // Initialize appropriate map
-    if (tabId === 'reflect-tab') {
-        setTimeout(() => {
+    // Initialize appropriate map with a small delay to ensure the tab content is visible
+    setTimeout(() => {
+        if (tabId === 'reflect-tab') {
             initMap();
             updateMarkers();
-        }, 100);
-    } else if (tabId === 'midpoint-tab') {
-        setTimeout(() => {
+        } else if (tabId === 'midpoint-tab') {
             initMidpointMap();
             // Update the map if we already have data
             if (document.getElementById('point1_coords').value && 
                 document.getElementById('point2_coords').value) {
                 calculateMidpointWithMap();
             }
-        }, 100);
-    } else if (tabId === 'batch-tab') {
-        setTimeout(() => {
+        } else if (tabId === 'batch-tab') {
             // We'll initialize batch map only when needed
             document.getElementById('batch_map').style.display = 'none';
-        }, 100);
-    }
+        }
+    }, 100);
 }
 
-        // Initialize tabs and default functionality on page load
-        window.onload = function() {
-            // Fix Leaflet icon paths
-            fixLeafletIconPaths();
-            
-            // Initialize the default tab
-            switchTab('reflect-tab');
-        };
+// Initialize tabs and default functionality on page load
+window.onload = function() {
+    // Fix Leaflet icon paths
+    fixLeafletIconPaths();
+    
+    // Initialize the default tab
+    switchTab('reflect-tab');
+};
     </script>
         <footer style="text-align: center; padding: 20px; font-size: 12px;">
   <p>Found a bug or have a feature idea? Message me on Discord:
