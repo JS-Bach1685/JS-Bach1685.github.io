@@ -120,7 +120,6 @@
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <p>You can also drag & drop Point A or the Midpoint</p>
         <p>Refresh the page if the map looks wonky</p>
-        <div id="distance-warning"></div>
         <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
@@ -131,8 +130,9 @@
             <label>Coordinates:</label>
             <input type="text" id="m_coords" value="42.48927, -95.54477" placeholder="lat, lon">
         </div>
-        <button onclick="updateMarkers()">Calculate Reflected Point</button>
-        <div id="map"></div>
+	<button onclick="updateMarkers()">Calculate Reflected Point</button>
+        <div id="distance-warning"></div>
+	<div id="map"></div>
         <div id="result" class="result-box"></div>
     </div>
     
