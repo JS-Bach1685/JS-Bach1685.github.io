@@ -147,6 +147,7 @@
     
     <div id="midpoint-tab" class="tab-content">
         <h3>Calculate the Midpoint Between Two Coordinates</h3>
+	<p>Endpoints can be dragged</p>
         <div class="input-group">
             <h3>Point 1</h3>
             <label>Coordinates:</label>
@@ -825,9 +826,8 @@ if (isTooLarge) {
     // Show warning
     warningBox.innerHTML = `
         <div class="warning-box">
-            <strong>Warning:</strong> The distance between Point A and Midpoint (${distance.toFixed(0)} miles) 
-            is very large. For points this far apart, the reflected point calculation may not be what you expect.
-            The true shortest path midpoint would be along a different great circle path.
+            <strong>Warning:</strong> The distance between Point A and the Midpoint (${distance.toFixed(0)} miles) 
+            is very large. For points this far apart the true shortest path midpoint would be the antipode of the current midpoint.
         </div>
     `;
 
