@@ -115,6 +115,7 @@
   	}
 }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
     <h3>A variety of map tools to help with team TPG</h3>
@@ -170,20 +171,57 @@
     </div>
 
 <div id="batch-tab" class="tab-content">
-    <h3>Batch Process Coordinate Pairs to Find Closest Midpoint</h3>
+    <h3>Photo Pair Finder - Batch Process Coordinate Pairs</h3>
     <p>Upload two CSV files with photo coordinates and find which pair produces a midpoint closest to the target.</p>
-    <p><strong>Warning:</strong>This might ruin the fun of the game, use at your own risk! Talk to your partner instead, make a new friend!</p>
+    <p>Now accepts exported Voronoi Map CSVs!</p>
+    <p><strong>Warning:</strong> Both CSVs should have the same format to avoid errors.</p>
+    
+    <div class="input-group">
+        <h4>CSV Format Settings</h4>
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <input type="checkbox" id="auto_detect" checked style="margin-right: 10px;">
+            <label for="auto_detect" style="width: auto; margin-right: 15px;"><strong>Auto-detect coordinate columns</strong></label>
+            <span style="font-size: 12px; color: #666;">(Recommended for most files)</span>
+        </div>
+        
+        <div id="manual_columns" style="display: none;">
+            <div style="margin-bottom: 10px;">
+                <label for="lat_column">Latitude Column Index:</label>
+                <input type="number" id="lat_column" value="0" min="0" style="width: 60px;">
+                <span style="margin-left: 15px; font-size: 12px; color: #666;">(First column is index 0)</span>
+            </div>
+            <div>
+                <label for="lon_column">Longitude Column Index:</label>
+                <input type="number" id="lon_column" value="1" min="0" style="width: 60px;">
+            </div>
+
+<p><small>Specify which columns contain the latitude and longitude values. Default is 0,1 for the voronoi map exported csv.</small></p>
+
+<div style="display: flex; align-items: center; margin-bottom: 10px; margin-top: 10px;">
+    <input type="checkbox" id="has_headers" checked style="margin-right: 10px;">
+    <label for="has_headers" style="width: auto; margin-right: 15px;"><strong>Files have headers</strong></label>
+    <span style="font-size: 12px; color: #666;">(Uncheck if your CSV files don't have column names in the first row)</span>
+</div>
+
+	<div style="margin-bottom: 10px;">
+    <label for="desc_column">Description Column Index:</label>
+    <input type="number" id="desc_column" value="2" min="0" style="width: 60px;">
+    <span style="margin-left: 15px; font-size: 12px; color: #666;">(Column to use for point description)</span>
+</div>
+            
+        </div>
+    </div>
         
     <div class="input-group">
         <h3>File 1 (CSV with coordinates)</h3>
         <input type="file" id="file1" accept=".csv">
-        <p><small>Format: Each line should contain "latitude,longitude" or "description,latitude,longitude"</small></p>
+        <p><small>CSV can include additional columns for descriptions, rounds, URLs, etc.</small></p>
     </div>
     
     <div class="input-group">
         <h3>File 2 (CSV with coordinates)</h3>
         <input type="file" id="file2" accept=".csv">
-        <p><small>Format: Same as File 1</small></p>
+        <p><small>Same format as File 1</small></p>
     </div>
     
     <div class="input-group">
@@ -301,47 +339,50 @@ function createGoldIcon() {
     }
 
     // Tab switching function
-    function switchTab(tabId) {
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        // Remove active class from all tabs
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        
-        // Show the selected tab content
-        document.getElementById(tabId).classList.add('active');
-        
-        // Add active class to the clicked tab
-        Array.from(document.querySelectorAll('.tab')).find(tab => 
-            tab.textContent.toLowerCase().includes(tabId.split('-')[0])
-        ).classList.add('active');
-        
-        // Initialize appropriate map
-        if (tabId === 'reflect-tab') {
-            setTimeout(() => {
-                initMap();
-                updateMarkers();
-            }, 100);
-        } else if (tabId === 'midpoint-tab') {
-            setTimeout(() => {
-                initMidpointMap();
-                // Update the map if we already have data
-                if (document.getElementById('point1_coords').value && 
-                    document.getElementById('point2_coords').value) {
-                    calculateMidpointWithMap();
-                }
-            }, 100);
-        } else if (tabId === 'batch-tab') {
-            setTimeout(() => {
-                // We'll initialize batch map only when needed
-                document.getElementById('batch_map').style.display = 'none';
-            }, 100);
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show the selected tab content
+    const tabContent = document.getElementById(tabId);
+    if (tabContent) tabContent.classList.add('active');
+
+    // Add active class to the correct tab using a matching ID-to-label map
+    const tabMap = {
+        'reflect-tab': 'Find Reflected Point',
+        'midpoint-tab': 'Calculate Midpoint',
+        'batch-tab': 'Photo Pair Finder'
+    };
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        if (tab.textContent.trim() === tabMap[tabId]) {
+            tab.classList.add('active');
         }
-    }
+    });
+
+    // Initialize the appropriate map with a delay
+    setTimeout(() => {
+        if (tabId === 'reflect-tab') {
+            initMap();
+            updateMarkers();
+        } else if (tabId === 'midpoint-tab') {
+            initMidpointMap();
+            if (document.getElementById('point1_coords').value && document.getElementById('point2_coords').value) {
+                calculateMidpointWithMap();
+            }
+        } else if (tabId === 'batch-tab') {
+            document.getElementById('batch_map').style.display = 'none';
+        }
+    }, 100);
+}
+
 
     // Function to parse coordinates from input string
     function parseCoordinates(coordString) {
@@ -929,44 +970,342 @@ function initBatchMap() {
     fixLeafletIconPaths();
 }
 
-// Function to parse CSV file content
-function parseCSVCoordinates(csvContent) {
+// Add this code to your existing JavaScript section
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener for auto-detect checkbox
+    const autoDetectCheckbox = document.getElementById('auto_detect');
+    const manualColumnsDiv = document.getElementById('manual_columns');
+    
+    if (autoDetectCheckbox && manualColumnsDiv) {
+        autoDetectCheckbox.addEventListener('change', function() {
+            manualColumnsDiv.style.display = this.checked ? 'none' : 'block';
+        });
+    }
+});
+/**
+ * More robust function to determine if a CSV has headers
+ * @param {string} csvContent - The content of the CSV file
+ * @returns {boolean} - True if the CSV likely has headers, false otherwise
+ */
+function detectCSVHeaders(csvContent) {
+    const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length < 2) return false; // Need at least 2 lines to compare
+    
+    const firstLine = lines[0].split(',').map(item => item.trim());
+    const secondLine = lines[1].split(',').map(item => item.trim());
+    
+    // If first line has different number of columns than second, it's likely a header
+    if (firstLine.length !== secondLine.length) return true;
+    
+    // Check if first line has any non-numeric values while second line is all numeric
+    const firstLineHasNonNumeric = firstLine.some(item => isNaN(parseFloat(item)));
+    const secondLineAllNumeric = secondLine.every(item => !isNaN(parseFloat(item)));
+    
+    if (firstLineHasNonNumeric && secondLineAllNumeric) return true;
+    
+    // Check for common header words in first line
+    const headerKeywords = ['name', 'id', 'title', 'label', 'description', 'desc', 'lat', 'lon', 'lng', 
+                           'latitude', 'longitude', 'location', 'address', 'city', 'state', 'country', 
+                           'zip', 'postal', 'code', 'date', 'time', 'year', 'month', 'day'];
+    
+    const firstLineHasHeaderWords = firstLine.some(item => 
+        headerKeywords.some(keyword => 
+            item.toLowerCase().includes(keyword.toLowerCase())
+        )
+    );
+    
+    // If we detect header keywords in the first line, it's likely a header
+    if (firstLineHasHeaderWords) return true;
+    
+    // Compare data patterns between first row and other rows
+    // If first row pattern is significantly different, it might be a header
+    let firstRowNumericCount = 0;
+    let otherRowsNumericCount = 0;
+    let rowsChecked = 0;
+    
+    firstLine.forEach(item => {
+        if (!isNaN(parseFloat(item))) firstRowNumericCount++;
+    });
+    
+    // Check up to 5 more rows
+    for (let i = 1; i < Math.min(lines.length, 6); i++) {
+        const rowItems = lines[i].split(',').map(item => item.trim());
+        let rowNumericCount = 0;
+        
+        rowItems.forEach(item => {
+            if (!isNaN(parseFloat(item))) rowNumericCount++;
+        });
+        
+        otherRowsNumericCount += rowNumericCount;
+        rowsChecked++;
+    }
+    
+    const avgOtherRowsNumeric = otherRowsNumericCount / rowsChecked;
+    
+    // If first row has significantly less numeric values than others, likely a header
+    if (firstRowNumericCount < avgOtherRowsNumeric * 0.7) return true;
+    
+    // Default to assuming no headers if none of the above checks passed
+    return false;
+}
+  
+/**
+ * Automatically detects the latitude and longitude columns in a CSV file.
+ * @param {string} csvContent - The content of the CSV file as a string
+ * @returns {Object} - Object containing the detected latitude and longitude column indices
+ */
+function autoDetectCoordinateColumns(csvContent) {
+    if (!csvContent || typeof csvContent !== 'string') {
+        return { latIndex: 0, lonIndex: 1 }; // Default values if input is invalid
+    }
+
+    // Split content into lines and get header row if it exists
     const lines = csvContent.split(/\r?\n/);
+    if (lines.length < 2) {
+        return { latIndex: 0, lonIndex: 1 }; // Not enough data, return defaults
+    }
+
+    // Check if we have headers (first attempt to parse first line as numbers)
+    const firstLineParts = lines[0].split(',').map(p => p.trim());
+    const hasHeaders = firstLineParts.some(part => isNaN(parseFloat(part)));
+
+    // Get column headers if they exist, otherwise use indices as headers
+    const headers = hasHeaders ? firstLineParts : Array.from({ length: firstLineParts.length }, (_, i) => `Column ${i}`);
+    
+    // Header-based detection - common names for lat/lon columns
+    const latKeywords = ['lat', 'latitude', 'latitud'];
+    const lonKeywords = ['lon', 'lng', 'long', 'longitude', 'longitud'];
+    
+    let latCandidates = [];
+    let lonCandidates = [];
+    
+    // First check headers for common lat/lon names
+    headers.forEach((header, index) => {
+        const headerLower = header.toLowerCase();
+        
+        // Check for latitude keywords
+        if (latKeywords.some(keyword => headerLower.includes(keyword))) {
+            latCandidates.push({ index, confidence: 0.9 }); // High confidence based on header
+        }
+        
+        // Check for longitude keywords
+        if (lonKeywords.some(keyword => headerLower.includes(keyword))) {
+            lonCandidates.push({ index, confidence: 0.9 }); // High confidence based on header
+        }
+    });
+    
+    // If we couldn't find by headers, analyze data in columns
+    if (latCandidates.length === 0 || lonCandidates.length === 0) {
+        // Get sample rows for analysis (skip header if it exists)
+        const startRow = hasHeaders ? 1 : 0;
+        const sampleRows = lines.slice(startRow, Math.min(startRow + 10, lines.length))
+            .filter(line => line.trim() !== '');
+        
+        // Extract columns from sample
+        const columns = [];
+        for (let i = 0; i < headers.length; i++) {
+            columns[i] = [];
+        }
+        
+        // Parse column values
+        sampleRows.forEach(line => {
+            const parts = line.split(',').map(p => p.trim());
+            for (let i = 0; i < Math.min(parts.length, headers.length); i++) {
+                const parsedValue = parseFloat(parts[i]);
+                if (!isNaN(parsedValue)) {
+                    columns[i].push(parsedValue);
+                }
+            }
+        });
+        
+        // Analyze each column for lat/lon characteristics
+        columns.forEach((values, index) => {
+            if (values.length === 0) return; // Skip empty columns
+            
+            // Calculate value range and average
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
+            const allNumeric = values.length === sampleRows.length;
+            
+            // Latitude should be between -90 and 90
+            if (allNumeric && min >= -90 && max <= 90) {
+                // Higher confidence if values are in typical ranges
+                let confidence = 0.6;
+                
+                // Most populated areas have latitudes between -60 and 75
+                if (min >= -60 && max <= 75) {
+                    confidence += 0.1;
+                }
+                
+                // Non-zero latitudes increase confidence
+                if (Math.abs(avg) > 1) {
+                    confidence += 0.1;
+                }
+                
+                latCandidates.push({ index, confidence });
+            }
+            
+            // Longitude should be between -180 and 180
+            if (allNumeric && min >= -180 && max <= 180) {
+                // Higher confidence if values are in typical ranges
+                let confidence = 0.6;
+                
+                // Most longitudes will have some significant value
+                if (Math.abs(avg) > 5) {
+                    confidence += 0.1;
+                }
+                
+                lonCandidates.push({ index, confidence });
+            }
+        });
+    }
+    
+    // If we still have no candidates, look for any numeric columns
+    if (latCandidates.length === 0 || lonCandidates.length === 0) {
+        // Get the first few numeric columns
+        const numericColumns = [];
+        
+        // Check first few rows
+        const startRow = hasHeaders ? 1 : 0;
+        const checkRows = Math.min(lines.length, startRow + 3);
+        
+        for (let i = startRow; i < checkRows; i++) {
+            const parts = lines[i].split(',').map(p => p.trim());
+            
+            parts.forEach((part, index) => {
+                if (!numericColumns.includes(index) && !isNaN(parseFloat(part))) {
+                    numericColumns.push(index);
+                }
+            });
+        }
+        
+        // If we have at least two numeric columns, use the first two as lat/lon
+        if (numericColumns.length >= 2) {
+            if (latCandidates.length === 0) {
+                latCandidates.push({ index: numericColumns[0], confidence: 0.3 });
+            }
+            if (lonCandidates.length === 0) {
+                lonCandidates.push({ index: numericColumns[1], confidence: 0.3 });
+            }
+        }
+    }
+    
+    // Sort candidates by confidence
+    latCandidates.sort((a, b) => b.confidence - a.confidence);
+    lonCandidates.sort((a, b) => b.confidence - a.confidence);
+    
+    // Ensure lat and lon are different columns
+    if (latCandidates.length > 0 && lonCandidates.length > 0) {
+        if (latCandidates[0].index === lonCandidates[0].index) {
+            // If the same column is detected for both, take the second best for lon
+            if (lonCandidates.length > 1) {
+                lonCandidates[0] = lonCandidates[1];
+            } else if (latCandidates.length > 1) {
+                // Or take the second best for lat
+                latCandidates[0] = latCandidates[1];
+            } else {
+                // If no alternatives, use consecutive columns
+                lonCandidates[0] = { index: latCandidates[0].index + 1, confidence: 0.1 };
+            }
+        }
+    }
+    
+    // Set default values if no candidates were found
+    const latIndex = latCandidates.length > 0 ? latCandidates[0].index : 0;
+    const lonIndex = lonCandidates.length > 0 ? lonCandidates[0].index : 1;
+    
+    return { 
+        latIndex, 
+        lonIndex,
+        latConfidence: latCandidates.length > 0 ? latCandidates[0].confidence : 0,
+        lonConfidence: lonCandidates.length > 0 ? lonCandidates[0].confidence : 0
+    };
+}
+
+// Update the CSV parsing function to use autodetected columns
+function parseCSVCoordinates(csvContent, latIndex = null, lonIndex = null, descIndex = null, explicitHasHeader = null){
+    // Auto-detect columns if not specified
+    let columnIndices;
+    if (latIndex === null || lonIndex === null) {
+        columnIndices = autoDetectCoordinateColumns(csvContent);
+        latIndex = columnIndices.latIndex;
+        lonIndex = columnIndices.lonIndex;
+    }
+    
+    const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
     const coordinates = [];
     
-    for (let i = 0; i < lines.length; i++) {
+    // Skip empty file
+    if (lines.length === 0) {
+        return coordinates;
+    }
+    
+    // Use the improved header detection function
+    const hasHeader = typeof explicitHasHeader === 'boolean' ? explicitHasHeader : detectCSVHeaders(csvContent);
+    const startRow = hasHeader ? 1 : 0;
+    
+    // Get headers only if we actually have headers
+    const headers = hasHeader ? lines[0].split(',').map(h => h.trim()) : null;
+    
+    // If no specific description column is provided, try to find a good candidate
+    // Typically the first non-lat/lon column
+    if (descIndex === null) {
+        // Start from column 2 (typically the third column, index 2) if lat/lon are 0 and 1
+        let startIdx = (latIndex === 0 && lonIndex === 1) ? 2 : 0;
+        
+        for (let i = startIdx; i < (lines[0]?.split(',').length || 0); i++) {
+            if (i !== latIndex && i !== lonIndex) {
+                descIndex = i;
+                break;
+            }
+        }
+    }
+    
+    for (let i = startRow; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
         
-        // Try to extract coordinates - handle both formats:
-        // "lat,lon" or "name,lat,lon"
+        // Split the line into parts
         const parts = line.split(',').map(p => p.trim());
         
         try {
-            let lat, lon, name;
+            // Need at least enough parts to include lat and lon
+            const maxIndex = Math.max(latIndex, lonIndex);
+            if (parts.length <= maxIndex) continue;
             
-            if (parts.length === 2) {
-                // Just coordinates: "lat,lon"
-                [lat, lon] = [parseFloat(parts[0]), parseFloat(parts[1])];
-                name = `Point ${i+1}`;
-            } else if (parts.length >= 3) {
-                // Format with name: "name,lat,lon"
-                name = parts[0];
-                lat = parseFloat(parts[1]);
-                lon = parseFloat(parts[2]);
-            } else {
-                continue; // Skip invalid lines
-            }
+            // Extract lat and lon from specified indices
+            const lat = parseFloat(parts[latIndex]);
+            const lon = parseFloat(parts[lonIndex]);
             
             if (isNaN(lat) || isNaN(lon)) continue;
             
             // Normalize coordinates
-            [lat, lon] = normalizeCoordinates(lat, lon);
+            const [normalizedLat, normalizedLon] = normalizeCoordinates(lat, lon);
+            
+            // Build a name/description from the selected description column
+            let name = `Point ${i+1}`;
+            
+            // If we have a valid description column and it exists in this row
+            if (descIndex !== null && descIndex < parts.length) {
+                const descValue = parts[descIndex];
+                if (descValue && descValue.trim()) {
+                    // If we have headers, include the header name
+                    if (headers && hasHeader) {
+                        name = `${headers[descIndex]}: ${descValue}`;
+                    } else {
+                        // For files without headers, just use the raw description value
+                        name = descValue;
+                    }
+                }
+            }
             
             coordinates.push({
                 name: name,
-                lat: lat,
-                lon: lon
+                lat: normalizedLat,
+                lon: normalizedLon,
+                // Store all original parts in case needed for display
+                originalData: parts
             });
         } catch (e) {
             console.warn(`Error parsing line ${i+1}: ${line}`);
@@ -976,66 +1315,87 @@ function parseCSVCoordinates(csvContent) {
     return coordinates;
 }
 
-// Function to process batch files
+// Update the processBatchFiles function to include description column selection
+function parseCSVFileWithPapa(file, hasHeaders) {
+    return new Promise((resolve, reject) => {
+        Papa.parse(file, {
+            header: hasHeaders,
+            skipEmptyLines: true,
+            complete: results => resolve(results.data),
+            error: err => reject(err)
+        });
+    });
+}
+
+function extractCoordinatesFromRows(rows, latIndex, lonIndex, descIndex, hasHeaders, autoDetect) {
+    if (autoDetect && rows.length > 0) {
+        const sampleContent = Object.values(rows[0]).join(",");
+        const auto = autoDetectCoordinateColumns(sampleContent);
+        latIndex = auto.latIndex;
+        lonIndex = auto.lonIndex;
+    }
+
+    return rows.map((row, i) => {
+        const parts = hasHeaders ? Object.values(row) : row;
+        const lat = parseFloat(parts[latIndex]);
+        const lon = parseFloat(parts[lonIndex]);
+        const desc = descIndex !== null && descIndex < parts.length ? parts[descIndex] : `Point ${i + 1}`;
+        if (isNaN(lat) || isNaN(lon)) return null;
+        const [normLat, normLon] = normalizeCoordinates(lat, lon);
+        return {
+            name: hasHeaders && descIndex !== null ? `${Object.keys(row)[descIndex]}: ${desc}` : desc,
+            lat: normLat,
+            lon: normLon,
+            originalData: parts
+        };
+    }).filter(p => p !== null);
+}
+
 function processBatchFiles() {
-    // Clear previous results
     batchResults = [];
     batchMarkers.forEach(marker => {
         if (batchMap) batchMap.removeLayer(marker);
     });
     batchMarkers = [];
-    
     document.getElementById('batch_result').innerHTML = '';
-    
-    // Get files and target coordinates
+
     const file1 = document.getElementById('file1').files[0];
     const file2 = document.getElementById('file2').files[0];
     const targetMidpointStr = document.getElementById('target_midpoint').value.trim();
-    
-    // Validate inputs
-    if (!file1 || !file2) {
-        document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> Please upload both CSV files.';
+    const useAutoDetect = document.getElementById('auto_detect').checked;
+    const hasHeaders = document.getElementById('has_headers').checked;
+
+    if (!file1 || !file2 || !targetMidpointStr) {
+        document.getElementById('batch_result').innerHTML = '<strong>Please provide both files and a target midpoint.</strong>';
         return;
     }
-    
-    if (!targetMidpointStr) {
-        document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> Please enter target midpoint coordinates.';
-        return;
+
+    let [targetLat, targetLon] = parseCoordinates(targetMidpointStr);
+    [targetLat, targetLon] = normalizeCoordinates(targetLat, targetLon);
+
+    let latIndex = null, lonIndex = null, descIndex = null;
+    if (!useAutoDetect) {
+        latIndex = parseInt(document.getElementById('lat_column').value);
+        lonIndex = parseInt(document.getElementById('lon_column').value);
+        descIndex = parseInt(document.getElementById('desc_column').value);
     }
-    
-    try {
-        var [targetLat, targetLon] = parseCoordinates(targetMidpointStr);
-        [targetLat, targetLon] = normalizeCoordinates(targetLat, targetLon);
-    } catch (error) {
-        document.getElementById('batch_result').innerHTML = `<strong>Error:</strong> ${error.message}`;
-        return;
-    }
-    
-    // Show progress bar
+
     document.getElementById('batch_progress').style.display = 'block';
     document.getElementById('progress_bar').style.width = '0%';
     document.getElementById('progress_text').innerText = 'Reading files...';
-    
-    // Process files
+
     Promise.all([
-        readFileAsText(file1),
-        readFileAsText(file2)
-    ]).then(([content1, content2]) => {
-        // Parse coordinates from both files
-        const coords1 = parseCSVCoordinates(content1);
-        const coords2 = parseCSVCoordinates(content2);
-        
-        if (coords1.length === 0 || coords2.length === 0) {
-            throw new Error('Could not parse coordinates from one or both files. Check format.');
-        }
-        
-        document.getElementById('progress_text').innerText = `Processing ${coords1.length} × ${coords2.length} = ${coords1.length * coords2.length} possible pairs...`;
-        
-        // Process in batches to avoid freezing the UI
+        parseCSVFileWithPapa(file1, hasHeaders),
+        parseCSVFileWithPapa(file2, hasHeaders)
+    ]).then(([rows1, rows2]) => {
+        const coords1 = extractCoordinatesFromRows(rows1, latIndex, lonIndex, descIndex, hasHeaders, useAutoDetect);
+        const coords2 = extractCoordinatesFromRows(rows2, latIndex, lonIndex, descIndex, hasHeaders, useAutoDetect);
+
+        document.getElementById('progress_text').innerText = `Processing ${coords1.length} × ${coords2.length} pairs...`;
         processPairsInBatches(coords1, coords2, targetLat, targetLon, 0, 0, 100);
     }).catch(error => {
         document.getElementById('batch_progress').style.display = 'none';
-        document.getElementById('batch_result').innerHTML = `<strong>Error:</strong> ${error.message}`;
+        document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> ' + error.message;
     });
 }
 
@@ -1115,8 +1475,8 @@ function displayBatchResults(targetLat, targetLon) {
     // Sort results by distance
     batchResults.sort((a, b) => a.distance - b.distance);
     
-    // Take top 5 results
-    const topResults = batchResults.slice(0, 5);
+    // Take top 10 results
+    const topResults = batchResults.slice(0, 10);
     
     // Initialize map
     document.getElementById('batch_map').style.display = 'block';
@@ -1124,7 +1484,7 @@ function displayBatchResults(targetLat, targetLon) {
     
     // Create result HTML
     let resultHTML = `
-       <h3>Top 5 Closest Matches:</h3>
+       <h3>Top 10 Closest Matches:</h3>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
             <tr>
                 <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Rank</th>
@@ -1220,49 +1580,10 @@ function displayBatchResults(targetLat, targetLon) {
     
     resultHTML += '</>';
     document.getElementById('batch_result').innerHTML = resultHTML;
-    
+  
     // Fit map to markers
     const group = new L.featureGroup(batchMarkers);
     batchMap.fitBounds(group.getBounds().pad(0.3));
-}
-
-// Improved tab switching function to ensure maps load properly
-function switchTab(tabId) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show the selected tab content
-    document.getElementById(tabId).classList.add('active');
-    
-    // Add active class to the clicked tab
-    Array.from(document.querySelectorAll('.tab')).find(tab => 
-        tab.textContent.toLowerCase().includes(tabId.split('-')[0])
-    ).classList.add('active');
-    
-    // Initialize appropriate map with a small delay to ensure the tab content is visible
-    setTimeout(() => {
-        if (tabId === 'reflect-tab') {
-            initMap();
-            updateMarkers();
-        } else if (tabId === 'midpoint-tab') {
-            initMidpointMap();
-            // Update the map if we already have data
-            if (document.getElementById('point1_coords').value && 
-                document.getElementById('point2_coords').value) {
-                calculateMidpointWithMap();
-            }
-        } else if (tabId === 'batch-tab') {
-            // We'll initialize batch map only when needed
-            document.getElementById('batch_map').style.display = 'none';
-        }
-    }, 100);
 }
 
 // Initialize tabs and default functionality on page load
