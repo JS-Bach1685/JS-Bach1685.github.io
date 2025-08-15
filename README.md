@@ -1521,11 +1521,11 @@ function displayBatchResults(targetLat, targetLon) {
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${index + 1}</td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">
                     <div>${point1.name}</div>
-                    <div><small>(${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)})</small></div>
+                    <div><small>${point1.lat.toFixed(6)}, ${point1.lon.toFixed(6)}</small></div>
                 </td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">
                     <div>${point2.name}</div>
-                    <div><small>(${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)})</small></div>
+                    <div><small>${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)}</small></div>
                 </td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(2)} miles</td>
