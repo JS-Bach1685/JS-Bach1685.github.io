@@ -130,6 +130,9 @@
         <h3>Enter a point and midpoint to find the reflected location on the map.</h3>
         <p>You can also drag & drop Point A or the Midpoint</p>
         <p>Refresh the page if the map looks wonky</p>
+		<p><strong>Want to see all points reflected from a CSV?</strong> <a href="https://tpg.marsmathis.com/reflector/">Check out Morphior's reflector tool!</a>  </p>
+ 
+
                 <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
