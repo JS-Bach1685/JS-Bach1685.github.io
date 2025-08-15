@@ -175,7 +175,8 @@
     <p>Upload two CSV files with photo coordinates and find which pair produces a midpoint closest to the target.</p>
     <p>Now accepts exported Voronoi Map CSVs!</p>
     <p><strong>Warning:</strong> Both CSVs should have the same format to avoid errors.</p>
-    
+    <p><strong>Taking Too Long to compute?</strong> <a href="https://tpg.marsmathis.com/pairfinder/">Check out Morphior's site!</a>  </p>
+
     <div class="input-group">
         <h4>CSV Format Settings</h4>
         <div style="display: flex; align-items: center; margin-bottom: 10px;">
