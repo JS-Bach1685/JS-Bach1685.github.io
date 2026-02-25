@@ -178,7 +178,7 @@
     <p>Upload two CSV files with photo coordinates and find which pair produces a midpoint closest to the target.</p>
     <p>Now accepts exported Voronoi Map CSVs!</p>
     <p><strong>Warning:</strong> Both CSVs should have the same format to avoid errors.</p>
-    <p><strong>Taking Too Long to compute?</strong> <a href="https://tpg.marsmathis.com/pairfinder/">Check out Morphior's site!</a>  </p>
+    <p><strong>Want a better visualization?</strong> <a href="https://tpg.marsmathis.com/pairfinder/">Check out Morphior's site!</a>  </p>
 
     <div class="input-group">
         <h4>CSV Format Settings</h4>
@@ -1586,7 +1586,7 @@ function displayBatchResults(targetLat, targetLon) {
                     <div><small>${point2.lat.toFixed(6)}, ${point2.lon.toFixed(6)}</small></div>
                 </td>
                 <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${midpoint.lat.toFixed(6)}, ${midpoint.lon.toFixed(6)}</td>
-                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(2)} miles</td>
+                <td style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">${distance.toFixed(4)} miles</td>
             </tr>
         `;
         
