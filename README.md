@@ -7,7 +7,7 @@
     <style>
         #map { 
 	     height: 500px;
-	     margin-top: 1em 
+	     margin-top: 1em; 
 	     margin-bottom: 1em; 
 	}
 	#map.warning {
@@ -530,20 +530,33 @@ function throttle(func, limit) {
     }
 }
 
-    // Improved function to create a distance label that's always on one line
-    function createDistanceLabel(midLat, midLon, distance) {
+// Helper function to ensure consistent rounding and formatting everywhere
+function formatDistance(distanceMiles) {
+    // Math.round with Number.EPSILON fixes JS floating point rounding quirks
+    const roundedMiles = Math.round((distanceMiles + Number.EPSILON) * 10000) / 10000;
+    let displayText = `${roundedMiles.toFixed(4)} miles`;
+    
+    if (roundedMiles < 0.1) {
+        const feet = Math.round(((distanceMiles * 5280) + Number.EPSILON) * 10) / 10;
+        displayText += ` (${feet.toFixed(1)} ft)`;
+    }
+    
+    return displayText;
+}
+
+
+// Improved function to create a distance label that's always on one line
+    function createDistanceLabel(midLat, midLon, distanceTextString) {
         // Remove existing distance label if it exists
         if (distanceLabel) {
             midpointMap.removeLayer(distanceLabel);
         }
         
-        // Format the distance with appropriate precision
-        const formattedDistance = distance.toFixed(2);
-        
+       
         // Create a div icon with nowrap styling
         const labelIcon = L.divIcon({
             className: 'custom-label', // This is ignored, we'll use the html styling
-            html: `<div class="distance-label">${formattedDistance} miles</div>`,
+            html: `<div class="distance-label">${distanceTextString}</div>`,
             iconSize: [null, null], // Auto-size based on content
             iconAnchor: [50, 10] // Centered horizontally
         });
@@ -649,6 +662,7 @@ function throttle(func, limit) {
                     
                     // Calculate distance
                     const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
+					const displayDistance = formatDistance(distanceMiles);
                     
                     // Add polyline
                     distancePolyline = L.polyline(
@@ -661,9 +675,8 @@ function throttle(func, limit) {
                         (midLat + customLat) / 2,
                         (midLon + customLon) / 2
                     ];
-                    
-                    createDistanceLabel(midPoint[0], midPoint[1], distanceMiles);
-                    
+					createDistanceLabel(midPoint[0], midPoint[1], displayDistance);
+                                      
                 } catch (err) {
                     console.error("Error with custom midpoint:", err);
                     if (customMidpointMarker) {
@@ -720,6 +733,12 @@ function throttle(func, limit) {
             [lat1, lon1] = normalizeCoordinates(lat1, lon1);
             [lat2, lon2] = normalizeCoordinates(lat2, lon2);
             
+            // FIX: Lock in the 6-decimal rounding BEFORE math so the text and map match perfectly
+            lat1 = parseFloat(lat1.toFixed(6));
+            lon1 = parseFloat(lon1.toFixed(6));
+            lat2 = parseFloat(lat2.toFixed(6));
+            lon2 = parseFloat(lon2.toFixed(6));
+            
             // Update input fields with normalized values
             document.getElementById('point1_coords').value = `${lat1.toFixed(6)}, ${lon1.toFixed(6)}`;
             document.getElementById('point2_coords').value = `${lat2.toFixed(6)}, ${lon2.toFixed(6)}`;
@@ -731,7 +750,7 @@ function throttle(func, limit) {
                 <h3>Midpoint Results:</h3>
                 <strong>Calculated Midpoint:</strong> ${midLat.toFixed(6)}, ${midLon.toFixed(6)}<br>
                 <a href="https://www.google.com/maps/place/${midLat},${midLon}" target="_blank">View on Google Maps</a><br><br>
-                <strong>Distance from Point 1 to Point 2:</strong> ${calculateDistance(lat1, lon1, lat2, lon2).toFixed(2)} miles<br>
+                <strong>Distance from Point 1 to Point 2:</strong> ${formatDistance(calculateDistance(lat1, lon1, lat2, lon2))}<br>
             `;
             
             // Check if custom midpoint was provided
@@ -741,10 +760,22 @@ function throttle(func, limit) {
                     let [customLat, customLon] = parseCoordinates(customMidpointValue);
                     
                     [customLat, customLon] = normalizeCoordinates(customLat, customLon);
+                    
+                    // FIX: Lock in the 6-decimal rounding BEFORE math
+                    customLat = parseFloat(customLat.toFixed(6));
+                    customLon = parseFloat(customLon.toFixed(6));
+                    
                     document.getElementById('custom_midpoint').value = `${customLat.toFixed(6)}, ${customLon.toFixed(6)}`;
                     
-                    const customDistance = calculateDistance(midLat, midLon, customLat, customLon);
-                    resultHTML += `<br><strong>Distance between calculated midpoint and custom midpoint:</strong> ${customDistance.toFixed(2)} miles`;
+                    // Calculate the distance and format it
+                    const distanceMiles = calculateDistance(midLat, midLon, customLat, customLon);
+                    const displayDistance = formatDistance(distanceMiles);
+
+                    // Update the text output below the map
+                    resultHTML += `<p><strong>Distance between calculated midpoint and custom midpoint:</strong> ${displayDistance}</p>`;
+                    
+                    // Note: We no longer draw createDistanceLabel() here because updateMidpointMap() handles it!
+					
                 } catch (err) {
                     resultHTML += `<br><span style="color: red;">Error with custom midpoint: ${err.message}</span>`;
                 }
@@ -1121,7 +1152,7 @@ function autoDetectCoordinateColumns(csvContent) {
                 }
             }
         });
-        
+		
         // Analyze each column for lat/lon characteristics
         columns.forEach((values, index) => {
             if (values.length === 0) return; // Skip empty columns
@@ -1132,20 +1163,26 @@ function autoDetectCoordinateColumns(csvContent) {
             const avg = values.reduce((sum, val) => sum + val, 0) / values.length;
             const allNumeric = values.length === sampleRows.length;
             
+            // FIX: Check if the column actually contains decimals. 
+            // Coordinates almost always have decimals, while "10" is an integer.
+            const decimalCount = values.filter(v => !Number.isInteger(v)).length;
+            const hasDecimals = decimalCount > 0;
+            const isAllIntegers = decimalCount === 0;
+            
             // Latitude should be between -90 and 90
             if (allNumeric && min >= -90 && max <= 90) {
                 // Higher confidence if values are in typical ranges
                 let confidence = 0.6;
                 
                 // Most populated areas have latitudes between -60 and 75
-                if (min >= -60 && max <= 75) {
-                    confidence += 0.1;
-                }
+                if (min >= -60 && max <= 75) confidence += 0.1;
                 
                 // Non-zero latitudes increase confidence
-                if (Math.abs(avg) > 1) {
-                    confidence += 0.1;
-                }
+                if (Math.abs(avg) > 1) confidence += 0.1;
+                
+                // HUGE BOOST for having decimals, HUGE PENALTY for being purely whole numbers
+                if (hasDecimals) confidence += 0.3;
+                if (isAllIntegers) confidence -= 0.5;
                 
                 latCandidates.push({ index, confidence });
             }
@@ -1156,13 +1193,16 @@ function autoDetectCoordinateColumns(csvContent) {
                 let confidence = 0.6;
                 
                 // Most longitudes will have some significant value
-                if (Math.abs(avg) > 5) {
-                    confidence += 0.1;
-                }
+                if (Math.abs(avg) > 5) confidence += 0.1;
+                
+                // HUGE BOOST for having decimals, HUGE PENALTY for being purely whole numbers
+                if (hasDecimals) confidence += 0.3;
+                if (isAllIntegers) confidence -= 0.5;
                 
                 lonCandidates.push({ index, confidence });
             }
         });
+        
     }
     
     // If we still have no candidates, look for any numeric columns
@@ -1333,7 +1373,23 @@ function parseCSVFileWithPapa(file, hasHeaders) {
 
 function extractCoordinatesFromRows(rows, latIndex, lonIndex, descIndex, hasHeaders, autoDetect) {
     if (autoDetect && rows.length > 0) {
-        const sampleContent = Object.values(rows[0]).join(",");
+        // Reconstruct a mini CSV string (headers + top 10 rows) to feed the auto-detector
+        const sampleLines = [];
+        
+        // 1. Add headers if they exist
+        if (hasHeaders && typeof rows[0] === 'object' && !Array.isArray(rows[0])) {
+            sampleLines.push(Object.keys(rows[0]).join(','));
+        }
+        
+        // 2. Add up to 10 rows of actual data for it to analyze
+        const maxRows = Math.min(rows.length, 10);
+        for (let i = 0; i < maxRows; i++) {
+            sampleLines.push(Object.values(rows[i]).join(','));
+        }
+        
+        const sampleContent = sampleLines.join('\n');
+        
+        // 3. Run the smarter auto-detect
         const auto = autoDetectCoordinateColumns(sampleContent);
         latIndex = auto.latIndex;
         lonIndex = auto.lonIndex;
@@ -1396,7 +1452,9 @@ function processBatchFiles() {
         const coords2 = extractCoordinatesFromRows(rows2, latIndex, lonIndex, descIndex, hasHeaders, useAutoDetect);
 
         document.getElementById('progress_text').innerText = `Processing ${coords1.length} × ${coords2.length} pairs...`;
-        processPairsInBatches(coords1, coords2, targetLat, targetLon, 0, 0, 100);
+        
+        // OPTIMIZED CALL: No longer passing the 100 batch limit!
+        processPairsInBatches(coords1, coords2, targetLat, targetLon, 0, 0);
     }).catch(error => {
         document.getElementById('batch_progress').style.display = 'none';
         document.getElementById('batch_result').innerHTML = '<strong>Error:</strong> ' + error.message;
@@ -1413,35 +1471,32 @@ function readFileAsText(file) {
     });
 }
 
-// Process pairs in batches to avoid UI freeze
-function processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j, batchSize) {
+// OPTIMIZED TIME-BASED CHUNKING: Runs at max speed without freezing the browser
+function processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j) {
     const totalPairs = coords1.length * coords2.length;
-    const startTime = performance.now();
-    let pairsProcessed = 0;
+    const startTime = performance.now(); // Start a timer for this chunk
     
-    while (i < coords1.length && pairsProcessed < batchSize) {
-        while (j < coords2.length && pairsProcessed < batchSize) {
+    // Run at maximum speed for up to 40 milliseconds before yielding
+    while (i < coords1.length && (performance.now() - startTime) < 40) {
+        
+        // Process in mini-batches so we don't check the clock on literally every single pair
+        let miniBatch = 0;
+        while (j < coords2.length && miniBatch < 2000) {
             const coord1 = coords1[i];
             const coord2 = coords2[j];
             
-            // Calculate midpoint
-            const [midLat, midLon] = calculateGeographicMidpoint([
-                [coord1.lat, coord1.lon],
-                [coord2.lat, coord2.lon]
-            ]);
-            
-            // Calculate distance to target
+            // Calculate midpoint and distance
+            const [midLat, midLon] = calculateGeographicMidpoint([[coord1.lat, coord1.lon], [coord2.lat, coord2.lon]]);
             const distanceToTarget = calculateDistance(midLat, midLon, targetLat, targetLon);
             
             batchResults.push({
-                point1: coord1,
-                point2: coord2,
+                point1: coord1, point2: coord2,
                 midpoint: { lat: midLat, lon: midLon },
                 distance: distanceToTarget
             });
             
-            pairsProcessed++;
             j++;
+            miniBatch++;
         }
         
         if (j >= coords2.length) {
@@ -1450,16 +1505,16 @@ function processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j, bat
         }
     }
     
-    // Update progress
+    // Update progress ONLY once per 40ms chunk (drastically fewer DOM updates!)
     const processedSoFar = Math.min(i * coords2.length + j, totalPairs);
     const percentComplete = Math.round((processedSoFar / totalPairs) * 100);
     document.getElementById('progress_bar').style.width = percentComplete + '%';
     document.getElementById('progress_text').innerText = `Processed ${processedSoFar} of ${totalPairs} pairs (${percentComplete}%)`;
     
     if (i < coords1.length) {
-        // Continue processing in the next batch
+        // Yield to browser to paint the progress bar, then resume immediately
         setTimeout(() => {
-            processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j, batchSize);
+            processPairsInBatches(coords1, coords2, targetLat, targetLon, i, j);
         }, 0);
     } else {
         // All done, show results
@@ -1582,7 +1637,8 @@ function displayBatchResults(targetLat, targetLon) {
         }
     });
     
-    resultHTML += '</>';
+    // FIX: Properly closed the table tag here!
+    resultHTML += '</table>';
     document.getElementById('batch_result').innerHTML = resultHTML;
   
     // Fit map to markers
@@ -1598,7 +1654,8 @@ window.onload = function() {
     // Initialize the default tab
     switchTab('reflect-tab');
 };
-    </script>
+</script>
+
         <footer style="text-align: center; padding: 20px; font-size: 12px;">
   <p>Found a bug or have a feature idea? Message me on Discord:
   <a href="https://discord.com/users/g3mbert" target="_blank" style="text-decoration: none; color: inherit;"> 
@@ -1607,3 +1664,4 @@ window.onload = function() {
 </footer>
 </body>
 </html>
+
