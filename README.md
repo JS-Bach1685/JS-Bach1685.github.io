@@ -145,7 +145,13 @@
         </div>
         <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="distance-warning"></div>
-        <div id="map"></div>
+
+       <div class="input-group">
+            <input type="checkbox" id="autoZoomToggleReflect" checked>
+            <label for="autoZoomToggleReflect" style="width: auto; cursor: pointer;">Auto-zoom map to fit all points</label>
+        </div>
+
+	 <div id="map"></div>
         <div id="result" class="result-box"></div>
     </div>
     
@@ -153,6 +159,10 @@
         <h3>Calculate the Midpoint Between Two Coordinates</h3>
 	<p>Endpoints can be dragged</p>
         <div class="input-group">
+    <input type="checkbox" id="autoZoomToggle" checked>
+    <label for="autoZoomToggle" style="width: auto; cursor: pointer;">Auto-zoom map to fit all points</label>
+</div>
+		<div class="input-group">
             <h3>Point 1</h3>
             <label>Coordinates:</label>
             <input type="text" id="point1_coords" value="" placeholder="lat, lon" onchange="calculateMidpointWithMap()">
@@ -169,7 +179,11 @@
             <p><small>If provided, distance between calculated midpoint and this point will be shown</small></p>
         </div>
         <button onclick="calculateMidpointWithMap()">Calculate Midpoint</button>
-        <div id="midpoint_map"></div>
+        <div class="input-group">
+            <input type="checkbox" id="autoZoomToggleMidpoint" checked>
+            <label for="autoZoomToggleMidpoint" style="width: auto; cursor: pointer;">Auto-zoom map to fit all points</label>
+        </div>
+	<div id="midpoint_map"></div>
         <div id="midpoint_result" class="result-box"></div>
     </div>
 
@@ -710,11 +724,13 @@ function formatDistance(distanceMiles) {
             }
             
             // Create a group with all valid markers to fit the map view
-            const markersToInclude = [point1Marker, point2Marker, calculatedMidpointMarker];
-            if (customMidpointMarker) markersToInclude.push(customMidpointMarker);
-            
-            const group = new L.featureGroup(markersToInclude);
-            midpointMap.fitBounds(group.getBounds().pad(0.3));
+const markersToInclude = [point1Marker, point2Marker, calculatedMidpointMarker];
+if (customMidpointMarker) markersToInclude.push(customMidpointMarker);
+
+const group = new L.featureGroup(markersToInclude);
+if (document.getElementById('autoZoomToggleMidpoint').checked) {
+    midpointMap.fitBounds(group.getBounds().pad(0.3));
+}
             
         } catch (error) {
             console.error("Error updating midpoint map:", error);
@@ -981,10 +997,11 @@ if (isTooLarge) {
             markerB = addOrMoveMarker(markerB, b_lat, b_lon, {draggable: false, title: "Reflected Point"});
             markerB.bindPopup("Reflected Point");
             
-            // Fit map to show all points
-            const group = new L.featureGroup([markerA, markerM, markerB]);
-            map.fitBounds(group.getBounds().pad(0.3));
-            
+           // Fit map to show all points
+const group = new L.featureGroup([markerA, markerM, markerB]);
+if (document.getElementById('autoZoomToggleReflect').checked) {
+    map.fitBounds(group.getBounds().pad(0.3));
+}
             // Show result
             document.getElementById('result').innerHTML = `
                 <h3>Results:</h3>
