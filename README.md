@@ -388,20 +388,37 @@ function switchTab(tabId) {
 }
 
 
-    // Function to parse coordinates from input string
-    function parseCoordinates(coordString) {
-        if (!coordString || coordString.trim() === '') {
-            throw new Error("Coordinates cannot be empty");
-        }
-        
-        const parts = coordString.split(',').map(v => parseFloat(v.trim()));
-        
-        if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
-            throw new Error("Invalid coordinates format. Please use 'latitude, longitude'");
-        }
-        
-        return parts;
+// Function to parse coordinates from input string
+function parseCoordinates(coordString) {
+    if (!coordString || coordString.trim() === '') {
+        throw new Error("Coordinates cannot be empty");
     }
+
+    // 1. Check for Degrees + Compass Direction format (e.g., 34.98268° N, 34.06865° E)
+    const geoRegex = /([0-9.]+)[°\s]*([NSns])\s*,\s*([0-9.]+)[°\s]*([EWew])/;
+    const geoMatch = coordString.match(geoRegex);
+
+    if (geoMatch) {
+        let lat = parseFloat(geoMatch[1]);
+        if (geoMatch[2].toUpperCase() === 'S') lat = -lat; // South is negative
+
+        let lon = parseFloat(geoMatch[3]);
+        if (geoMatch[4].toUpperCase() === 'W') lon = -lon; // West is negative
+
+        return [lat, lon];
+    }
+
+    // 2. Handle standard numbers, with or without brackets: (36.0819976, -115.1805189)
+    let cleanString = coordString.replace(/[()[\]\s°]/g, '');
+    const parts = cleanString.split(',').map(v => parseFloat(v));
+
+    // 3. Keep your original validation so error messages still work!
+    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) {
+        throw new Error("Invalid coordinates format. Please use 'latitude, longitude'");
+    }
+
+    return parts;
+}
 
     // Function to normalize coordinates
     function normalizeCoordinates(lat, lng) {
