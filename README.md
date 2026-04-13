@@ -831,8 +831,8 @@ function formatDistance(distanceMiles) {
 
         // Check if points are identical or very close
         if (angularDistance < 1e-10) {
-            return [null, null]; // Cannot determine reflection direction
-        }
+            return [m_lat, m_lon]; // The reflected point is just the exact same location!
+}
 
         // Calculate initial bearing from point A to midpoint
         const y = Math.sin(Δλ) * Math.cos(φ2);
