@@ -136,12 +136,12 @@
                 <div class="input-group">
             <h3>Point A</h3>
             <label>Coordinates:</label>
-            <input type="text" id="a_coords" value="41.02201, -83.92215" placeholder="lat, lon">
+            <input type="text" id="a_coords" value="41.02201, -83.92215" placeholder="lat, lon" onchange="updateMarkers()">
         </div>
         <div class="input-group">
             <h3>Midpoint</h3>
             <label>Coordinates:</label>
-            <input type="text" id="m_coords" value="42.48927, -95.54477" placeholder="lat, lon">
+            <input type="text" id="m_coords" value="42.48927, -95.54477" placeholder="lat, lon" onchange="updateMarkers()">
         </div>
         <button onclick="updateMarkers()">Calculate Reflected Point</button>
         <div id="distance-warning"></div>
@@ -155,12 +155,12 @@
         <div class="input-group">
             <h3>Point 1</h3>
             <label>Coordinates:</label>
-            <input type="text" id="point1_coords" value="" placeholder="lat, lon">
+            <input type="text" id="point1_coords" value="" placeholder="lat, lon" onchange="calculateMidpointWithMap()">
         </div>
         <div class="input-group">
             <h3>Point 2</h3>
             <label>Coordinates:</label>
-            <input type="text" id="point2_coords" value="" placeholder="lat, lon">
+            <input type="text" id="point2_coords" value="" placeholder="lat, lon" onchange="calculateMidpointWithMap()">
         </div>
         <div class="input-group">
             <h3>Custom Midpoint (Optional)</h3>
